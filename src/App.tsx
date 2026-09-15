@@ -1,18 +1,15 @@
 import { useState } from 'react';
+import { useStore } from './store/store';
+import Login from './components/Login';
 import Layout from './components/Layout';
-import Dashboard from './modules/Dashboard';
-import CompanyModule from './modules/CompanyModule';
-import EmployeesModule from './modules/EmployeesModule';
-import AssetsModule from './modules/AssetsModule';
-import RATModule from './modules/RATModule';
-import IncidentsModule from './modules/IncidentsModule';
-import AuditModule from './modules/AuditModule';
-import MaturityModule from './modules/MaturityModule';
-import DocumentsModule from './modules/DocumentsModule';
-import LogsModule from './modules/LogsModule';
+import { Dashboard, CompanyModule, EmployeesModule, AssetsModule, RATModule, IncidentsModule, AuditModule, MaturityModule, DocumentsModule, LogsModule } from './modules/AllModules';
+import AdminModule from './modules/AdminModule';
 
 export default function App() {
+  const { currentUser } = useStore();
   const [currentModule, setCurrentModule] = useState('dashboard');
+
+  if (!currentUser) return <Login />;
 
   const renderModule = () => {
     switch (currentModule) {
@@ -25,6 +22,7 @@ export default function App() {
       case 'audit': return <AuditModule />;
       case 'maturity': return <MaturityModule />;
       case 'documents': return <DocumentsModule />;
+      case 'admin': return <AdminModule />;
       case 'logs': return <LogsModule />;
       default: return <Dashboard />;
     }
