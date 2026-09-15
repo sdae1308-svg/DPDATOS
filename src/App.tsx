@@ -4,7 +4,7 @@ import Login from './components/Login';
 import Layout from './components/Layout';
 import { Dashboard, CompanyModule, EmployeesModule, AssetsModule, RATModule, IncidentsModule, AuditModule, MaturityModule, DocumentsModule, LogsModule } from './modules/AllModules';
 import AdminModule from './modules/AdminModule';
-import { setupAutoBackup, createBackup, saveBackupToLocalStorage } from './utils/backupUtils';
+import { setupAutoBackup, createBackup, saveBackupToLocalStorage, saveBackupToIndexedDB } from './utils/backupUtils';
 
 export default function App() {
   const { currentUser } = useStore();
@@ -17,8 +17,9 @@ export default function App() {
     // También guardar respaldo cada 5 minutos
     const intervalId = setInterval(() => {
       const state = useStore.getState();
-      const backup = createBackup(state);
+      const backup = createBackup(state, 'auto-interval');
       saveBackupToLocalStorage(backup);
+      saveBackupToIndexedDB(backup).catch(() => {});
     }, 5 * 60 * 1000); // 5 minutos
     
     return () => {
