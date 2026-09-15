@@ -96,6 +96,7 @@ interface AppState {
   // Helpers
   getActiveEnterprise: () => Enterprise | null;
   resetToDemo: () => void;
+  restoreFromBackup: (backupData: any) => void;
 }
 
 // Datos demo iniciales
@@ -310,7 +311,17 @@ export const useStore = create<AppState>()(
         enterprises: [defaultEnterprise],
         activeEnterpriseId: 'ENT-001',
         logs: []
-      })
+      }),
+
+      restoreFromBackup: (backupData) => {
+        const state = get();
+        set({
+          users: backupData.users || state.users,
+          enterprises: backupData.enterprises || state.enterprises,
+          activeEnterpriseId: backupData.activeEnterpriseId || state.activeEnterpriseId,
+          logs: [...state.logs, addLogEntry(state, 'Restaurar', 'Backup', `Respaldo restaurado desde ${backupData.timestamp || 'archivo'}`)]
+        });
+      }
     }),
     { name: 'compliance-ec-multi-storage' }
   )

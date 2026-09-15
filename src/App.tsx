@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from './store/store';
 import Login from './components/Login';
 import Layout from './components/Layout';
 import { Dashboard, CompanyModule, EmployeesModule, AssetsModule, RATModule, IncidentsModule, AuditModule, MaturityModule, DocumentsModule, LogsModule } from './modules/AllModules';
 import AdminModule from './modules/AdminModule';
+import { setupAutoBackup, createBackup, saveBackupToLocalStorage } from './utils/backupUtils';
 
 export default function App() {
   const { currentUser } = useStore();
   const [currentModule, setCurrentModule] = useState('dashboard');
+
+  // Auto-backup al cerrar la aplicación
+  useEffect(() => {
+    const cleanup = setupAutoBackup(() => useStore.getState());
+    
+    // También guardar respaldo cada 5 minutos
+    const intervalId = setInterval(() => {
+      const state = useStore.getState();
+      const backup = createBackup(state);
+      saveBackupToLocalStorage(backup);
+    }, 5 * 60 * 1000); // 5 minutos
+    
+    return () => {
+      cleanup();
+      clearInterval(intervalId);
+    };
+  }, []);
 
   if (!currentUser) return <Login />;
 
