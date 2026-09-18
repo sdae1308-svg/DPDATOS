@@ -395,9 +395,10 @@ export function IncidentsModule() {
 
 // ==================== AUDIT ====================
 import { lopdpCriteria, iso27001Criteria, iso27002Criteria, iso27701Criteria } from '../data/auditCriteria';
+import { generateAuditReportPDF, generateAuditReportWord } from '../utils/auditReportUtils';
 
 export function AuditModule() {
-  const { audits, addAudit, deleteAudit } = useEnterprise();
+  const { audits, addAudit, deleteAudit, company } = useEnterprise();
   const [activeTab, setActiveTab] = useState<'existing' | 'lopdp' | 'iso27001' | 'iso27002' | 'iso27701'>('existing');
   const [evaluations, setEvaluations] = useState<Record<string, { cumplimiento: string; evidencia: string; observaciones: string }>>({});
 
@@ -461,6 +462,48 @@ export function AuditModule() {
     setEvaluations({});
   };
 
+  const generateFullReport = async (norma: string, criteria: any[], format: 'pdf' | 'word') => {
+    if (!company) {
+      alert('No hay empresa seleccionada');
+      return;
+    }
+
+    const score = calculateScore(criteria);
+    const hallazgos = criteria
+      .filter(c => evaluations[c.id]?.cumplimiento === 'No Cumple' || evaluations[c.id]?.cumplimiento === 'Cumple Parcial')
+      .map((c, idx) => ({
+        id: `H-${Date.now()}-${idx}`,
+        descripcion: `${c.id}: ${c.description}`,
+        severidad: evaluations[c.id].cumplimiento === 'No Cumple' ? 'Mayor' : 'Menor',
+        recomendacion: evaluations[c.id]?.observaciones || '',
+        requisito: c.requirement,
+        evidencia: evaluations[c.id]?.evidencia || 'No documentada'
+      }));
+
+    const report = {
+      company,
+      auditType: norma,
+      auditDate: new Date().toLocaleDateString('es-EC'),
+      auditor: 'Auditor del Sistema',
+      criteria,
+      evaluations,
+      score,
+      hallazgos
+    };
+
+    try {
+      if (format === 'pdf') {
+        await generateAuditReportPDF(report);
+      } else {
+        await generateAuditReportWord(report);
+      }
+      alert(`Reporte ${format.toUpperCase()} generado exitosamente`);
+    } catch (error) {
+      console.error('Error al generar reporte:', error);
+      alert('Error al generar el reporte');
+    }
+  };
+
   const renderCriteriaTable = (norma: string, criteria: any[]) => {
     const score = calculateScore(criteria);
     const categories = [...new Set(criteria.map(c => c.category))];
@@ -478,14 +521,17 @@ export function AuditModule() {
               <p className="text-xs text-gray-500">Cumplimiento</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => saveAudit(norma, criteria)} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
               <i className="fas fa-save mr-1"></i>Guardar Auditoría
             </button>
-            <button onClick={() => exportToPDF(`Informe ${norma}`, criteria.map(c => ({ heading: `${c.id}: ${c.description}`, text: `Requisito: ${c.requirement}\nCumplimiento: ${evaluations[c.id]?.cumplimiento || 'No Evaluado'}\nEvidencia: ${evaluations[c.id]?.evidencia || 'N/A'}\nObservaciones: ${evaluations[c.id]?.observaciones || 'N/A'}` })), `Auditoria_${norma}`)} className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
-              <i className="fas fa-file-pdf mr-1"></i>Exportar PDF
+            <button onClick={() => generateFullReport(norma, criteria, 'pdf')} className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+              <i className="fas fa-file-pdf mr-1"></i>Reporte PDF Completo
             </button>
-            <button onClick={() => exportToExcel(criteria.map(c => ({ ID: c.id, Categoria: c.category, Descripcion: c.description, Requisito: c.requirement, Cumplimiento: evaluations[c.id]?.cumplimiento || 'No Evaluado', Evidencia: evaluations[c.id]?.evidencia || '', Observaciones: evaluations[c.id]?.observaciones || '' })), `Auditoria_${norma}`, 'Evaluacion')} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+            <button onClick={() => generateFullReport(norma, criteria, 'word')} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+              <i className="fas fa-file-word mr-1"></i>Reporte Word Completo
+            </button>
+            <button onClick={() => exportToExcel(criteria.map(c => ({ ID: c.id, Categoria: c.category, Descripcion: c.description, Requisito: c.requirement, Cumplimiento: evaluations[c.id]?.cumplimiento || 'No Evaluado', Evidencia: evaluations[c.id]?.evidencia || '', Observaciones: evaluations[c.id]?.observaciones || '' })), `Auditoria_${norma}`, 'Evaluacion')} className="px-4 py-2 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700">
               <i className="fas fa-file-excel mr-1"></i>Exportar Excel
             </button>
           </div>
