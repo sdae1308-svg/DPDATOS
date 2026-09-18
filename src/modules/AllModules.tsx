@@ -394,36 +394,238 @@ export function IncidentsModule() {
 }
 
 // ==================== AUDIT ====================
+import { lopdpCriteria, iso27001Criteria, iso27002Criteria, iso27701Criteria } from '../data/auditCriteria';
+
 export function AuditModule() {
-  const { audits, deleteAudit } = useEnterprise();
-  return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
-        <button onClick={() => exportToExcel(audits.flatMap((a: any) => a.hallazgos), 'hallazgos', 'Hallazgos')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm"><i className="fas fa-file-excel mr-1"></i>Excel Hallazgos</button>
-        <button onClick={() => exportToPDF('Informe de Auditoría', audits.map((a: any) => ({ heading: a.nombre, text: `Score: ${a.scoring}/100\n${a.hallazgos.length} hallazgos` })), 'Auditoria')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm"><i className="fas fa-file-pdf mr-1"></i>PDF</button>
-        <button onClick={() => exportToWord('Informe de Auditoría', audits.map((a: any) => ({ heading: a.nombre, text: `Tipo: ${a.tipo}\nAuditor: ${a.auditor}\nScore: ${a.scoring}/100\nHallazgos: ${a.hallazgos.length}` })), 'Auditoria')} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm"><i className="fas fa-file-word mr-1"></i>Word</button>
-      </div>
-      {audits.map((audit: any) => (
-        <div key={audit.id} className="bg-white rounded-lg border overflow-hidden">
-          <div className="p-4 border-b flex justify-between items-center">
-            <div><h4 className="font-semibold">{audit.nombre}</h4><p className="text-xs text-gray-500">{audit.tipo} | {audit.fechaInicio} → {audit.fechaFin}</p></div>
-            <div className="flex items-center gap-3">
-              <div className="text-center"><p className="text-2xl font-bold text-blue-600">{audit.scoring}</p><p className="text-[10px] text-gray-500">Score</p></div>
-              <button onClick={() => deleteAudit(audit.id)} className="text-red-600"><i className="fas fa-trash"></i></button>
+  const { audits, addAudit, deleteAudit } = useEnterprise();
+  const [activeTab, setActiveTab] = useState<'existing' | 'lopdp' | 'iso27001' | 'iso27002' | 'iso27701'>('existing');
+  const [evaluations, setEvaluations] = useState<Record<string, { cumplimiento: string; evidencia: string; observaciones: string }>>({});
+
+  const handleEvaluate = (criterionId: string, field: string, value: string) => {
+    setEvaluations(prev => ({
+      ...prev,
+      [criterionId]: {
+        ...prev[criterionId],
+        [field]: value,
+        cumplimiento: prev[criterionId]?.cumplimiento || '',
+        evidencia: prev[criterionId]?.evidencia || '',
+        observaciones: prev[criterionId]?.observaciones || ''
+      }
+    }));
+  };
+
+  const calculateScore = (criteria: any[]) => {
+    const evaluated = criteria.filter(c => evaluations[c.id]?.cumplimiento);
+    if (evaluated.length === 0) return 0;
+    const cumple = evaluated.filter(c => evaluations[c.id].cumplimiento === 'Cumple').length;
+    const parcial = evaluated.filter(c => evaluations[c.id].cumplimiento === 'Cumple Parcial').length;
+    return Math.round(((cumple + parcial * 0.5) / evaluated.length) * 100);
+  };
+
+  const saveAudit = (norma: string, criteria: any[]) => {
+    const score = calculateScore(criteria);
+    const hallazgos = criteria
+      .filter(c => evaluations[c.id]?.cumplimiento === 'No Cumple' || evaluations[c.id]?.cumplimiento === 'Cumple Parcial')
+      .map((c, idx) => ({
+        id: `H-${Date.now()}-${idx}`,
+        descripcion: `${c.id}: ${c.description}`,
+        severidad: evaluations[c.id].cumplimiento === 'No Cumple' ? 'Mayor' : 'Menor',
+        responsable: '',
+        fechaCompromiso: '',
+        estado: 'Abierto'
+      }));
+
+    addAudit({
+      id: `AUD-${Date.now()}`,
+      nombre: `Auditoría ${norma} - ${new Date().toLocaleDateString('es-EC')}`,
+      tipo: norma,
+      auditor: '',
+      fechaInicio: new Date().toISOString().split('T')[0],
+      fechaFin: new Date().toISOString().split('T')[0],
+      alcance: `Evaluación de cumplimiento de ${norma}`,
+      criterios: criteria.map(c => ({
+        id: c.id,
+        descripcion: c.description,
+        cumplimiento: evaluations[c.id]?.cumplimiento || 'No Evaluado',
+        evidencia: evaluations[c.id]?.evidencia || '',
+        hallazgo: evaluations[c.id]?.observaciones || '',
+        recomendacion: ''
+      })),
+      scoring: score,
+      estado: score >= 80 ? 'Aprobada' : score >= 60 ? 'Aprobada con observaciones' : 'No aprobada',
+      hallazgos
+    } as any);
+
+    alert('Auditoría guardada exitosamente');
+    setActiveTab('existing');
+    setEvaluations({});
+  };
+
+  const renderCriteriaTable = (norma: string, criteria: any[]) => {
+    const score = calculateScore(criteria);
+    const categories = [...new Set(criteria.map(c => c.category))];
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white rounded-lg border p-4">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-bold">{norma}</h3>
+              <p className="text-xs text-gray-500">{criteria.length} criterios de evaluación</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-blue-600">{score}%</p>
+              <p className="text-xs text-gray-500">Cumplimiento</p>
             </div>
           </div>
-          <div className="p-4">
-            <h5 className="text-xs font-semibold text-gray-500 mb-2">HALLAZGOS ({audit.hallazgos.length})</h5>
-            {audit.hallazgos.map((h: any) => (
-              <div key={h.id} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5 mb-1">
-                <span className={`w-2 h-2 rounded-full ${h.severidad === 'Crítico' ? 'bg-red-500' : h.severidad === 'Mayor' ? 'bg-orange-500' : 'bg-yellow-500'}`}></span>
-                <span className="flex-1">{h.descripcion}</span>
-                <span className={`px-1.5 py-0.5 rounded ${h.estado === 'Abierto' ? 'bg-red-100 text-red-700' : h.estado === 'Vencido' ? 'bg-red-200 text-red-800' : 'bg-blue-100 text-blue-700'}`}>{h.estado}</span>
-              </div>
-            ))}
+          <div className="flex gap-2">
+            <button onClick={() => saveAudit(norma, criteria)} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+              <i className="fas fa-save mr-1"></i>Guardar Auditoría
+            </button>
+            <button onClick={() => exportToPDF(`Informe ${norma}`, criteria.map(c => ({ heading: `${c.id}: ${c.description}`, text: `Requisito: ${c.requirement}\nCumplimiento: ${evaluations[c.id]?.cumplimiento || 'No Evaluado'}\nEvidencia: ${evaluations[c.id]?.evidencia || 'N/A'}\nObservaciones: ${evaluations[c.id]?.observaciones || 'N/A'}` })), `Auditoria_${norma}`)} className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+              <i className="fas fa-file-pdf mr-1"></i>Exportar PDF
+            </button>
+            <button onClick={() => exportToExcel(criteria.map(c => ({ ID: c.id, Categoria: c.category, Descripcion: c.description, Requisito: c.requirement, Cumplimiento: evaluations[c.id]?.cumplimiento || 'No Evaluado', Evidencia: evaluations[c.id]?.evidencia || '', Observaciones: evaluations[c.id]?.observaciones || '' })), `Auditoria_${norma}`, 'Evaluacion')} className="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+              <i className="fas fa-file-excel mr-1"></i>Exportar Excel
+            </button>
           </div>
         </div>
-      ))}
+
+        {categories.map(category => (
+          <div key={category} className="bg-white rounded-lg border overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b">
+              <h4 className="font-semibold text-sm">{category}</h4>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left px-3 py-2 w-20">ID</th>
+                    <th className="text-left px-3 py-2">Criterio</th>
+                    <th className="text-left px-3 py-2">Requisito</th>
+                    <th className="text-center px-3 py-2 w-32">Cumplimiento</th>
+                    <th className="text-left px-3 py-2">Evidencia</th>
+                    <th className="text-left px-3 py-2">Observaciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {criteria.filter(c => c.category === category).map(criterion => (
+                    <tr key={criterion.id} className="border-t hover:bg-gray-50">
+                      <td className="px-3 py-2 font-mono text-[10px]">{criterion.id}</td>
+                      <td className="px-3 py-2">
+                        <p className="font-medium">{criterion.description}</p>
+                        <p className="text-[10px] text-gray-400">{criterion.evidence}</p>
+                      </td>
+                      <td className="px-3 py-2 text-[10px] text-gray-600">{criterion.requirement}</td>
+                      <td className="px-3 py-2">
+                        <select
+                          value={evaluations[criterion.id]?.cumplimiento || ''}
+                          onChange={(e) => handleEvaluate(criterion.id, 'cumplimiento', e.target.value)}
+                          className={`w-full border rounded px-2 py-1 text-[10px] ${
+                            evaluations[criterion.id]?.cumplimiento === 'Cumple' ? 'bg-green-50 border-green-300' :
+                            evaluations[criterion.id]?.cumplimiento === 'Cumple Parcial' ? 'bg-yellow-50 border-yellow-300' :
+                            evaluations[criterion.id]?.cumplimiento === 'No Cumple' ? 'bg-red-50 border-red-300' : ''
+                          }`}
+                        >
+                          <option value="">No Evaluado</option>
+                          <option value="Cumple">✓ Cumple</option>
+                          <option value="Cumple Parcial">◐ Cumple Parcial</option>
+                          <option value="No Cumple">✗ No Cumple</option>
+                          <option value="No Aplica">⊘ No Aplica</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={evaluations[criterion.id]?.evidencia || ''}
+                          onChange={(e) => handleEvaluate(criterion.id, 'evidencia', e.target.value)}
+                          placeholder="Evidencia..."
+                          className="w-full border rounded px-2 py-1 text-[10px]"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={evaluations[criterion.id]?.observaciones || ''}
+                          onChange={(e) => handleEvaluate(criterion.id, 'observaciones', e.target.value)}
+                          placeholder="Observaciones..."
+                          className="w-full border rounded px-2 py-1 text-[10px]"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+        <button onClick={() => setActiveTab('existing')} className={`px-4 py-2 rounded text-sm whitespace-nowrap ${activeTab === 'existing' ? 'bg-white shadow text-blue-700' : 'text-gray-600'}`}>
+          <i className="fas fa-list mr-1"></i>Auditorías Existentes
+        </button>
+        <button onClick={() => setActiveTab('lopdp')} className={`px-4 py-2 rounded text-sm whitespace-nowrap ${activeTab === 'lopdp' ? 'bg-white shadow text-blue-700' : 'text-gray-600'}`}>
+          <i className="fas fa-shield-alt mr-1"></i>LOPDP
+        </button>
+        <button onClick={() => setActiveTab('iso27001')} className={`px-4 py-2 rounded text-sm whitespace-nowrap ${activeTab === 'iso27001' ? 'bg-white shadow text-blue-700' : 'text-gray-600'}`}>
+          <i className="fas fa-lock mr-1"></i>ISO 27001
+        </button>
+        <button onClick={() => setActiveTab('iso27002')} className={`px-4 py-2 rounded text-sm whitespace-nowrap ${activeTab === 'iso27002' ? 'bg-white shadow text-blue-700' : 'text-gray-600'}`}>
+          <i className="fas fa-tasks mr-1"></i>ISO 27002
+        </button>
+        <button onClick={() => setActiveTab('iso27701')} className={`px-4 py-2 rounded text-sm whitespace-nowrap ${activeTab === 'iso27701' ? 'bg-white shadow text-blue-700' : 'text-gray-600'}`}>
+          <i className="fas fa-user-shield mr-1"></i>ISO 27701
+        </button>
+      </div>
+
+      {activeTab === 'existing' && (
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <button onClick={() => exportToExcel(audits.flatMap((a: any) => a.hallazgos), 'hallazgos', 'Hallazgos')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm"><i className="fas fa-file-excel mr-1"></i>Excel Hallazgos</button>
+            <button onClick={() => exportToPDF('Informe de Auditoría', audits.map((a: any) => ({ heading: a.nombre, text: `Score: ${a.scoring}/100\n${a.hallazgos.length} hallazgos` })), 'Auditoria')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm"><i className="fas fa-file-pdf mr-1"></i>PDF</button>
+            <button onClick={() => exportToWord('Informe de Auditoría', audits.map((a: any) => ({ heading: a.nombre, text: `Tipo: ${a.tipo}\nAuditor: ${a.auditor}\nScore: ${a.scoring}/100\nHallazgos: ${a.hallazgos.length}` })), 'Auditoria')} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm"><i className="fas fa-file-word mr-1"></i>Word</button>
+          </div>
+          {audits.length === 0 ? (
+            <div className="bg-white rounded-lg border p-8 text-center">
+              <i className="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
+              <p className="text-gray-500">No hay auditorías registradas</p>
+              <p className="text-xs text-gray-400 mt-1">Crea una nueva auditoría desde las pestañas de normas</p>
+            </div>
+          ) : (
+            audits.map((audit: any) => (
+              <div key={audit.id} className="bg-white rounded-lg border overflow-hidden">
+                <div className="p-4 border-b flex justify-between items-center">
+                  <div><h4 className="font-semibold">{audit.nombre}</h4><p className="text-xs text-gray-500">{audit.tipo} | {audit.fechaInicio} → {audit.fechaFin}</p></div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-center"><p className="text-2xl font-bold text-blue-600">{audit.scoring}</p><p className="text-[10px] text-gray-500">Score</p></div>
+                    <button onClick={() => deleteAudit(audit.id)} className="text-red-600"><i className="fas fa-trash"></i></button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h5 className="text-xs font-semibold text-gray-500 mb-2">HALLAZGOS ({audit.hallazgos.length})</h5>
+                  {audit.hallazgos.map((h: any) => (
+                    <div key={h.id} className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5 mb-1">
+                      <span className={`w-2 h-2 rounded-full ${h.severidad === 'Crítico' ? 'bg-red-500' : h.severidad === 'Mayor' ? 'bg-orange-500' : 'bg-yellow-500'}`}></span>
+                      <span className="flex-1">{h.descripcion}</span>
+                      <span className={`px-1.5 py-0.5 rounded ${h.estado === 'Abierto' ? 'bg-red-100 text-red-700' : h.estado === 'Vencido' ? 'bg-red-200 text-red-800' : 'bg-blue-100 text-blue-700'}`}>{h.estado}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'lopdp' && renderCriteriaTable('LOPDP - Ley Orgánica de Protección de Datos Personales', lopdpCriteria)}
+      {activeTab === 'iso27001' && renderCriteriaTable('ISO 27001:2022 - Sistema de Gestión de Seguridad de la Información', iso27001Criteria)}
+      {activeTab === 'iso27002' && renderCriteriaTable('ISO 27002:2022 - Buenas Prácticas de Seguridad de la Información', iso27002Criteria)}
+      {activeTab === 'iso27701' && renderCriteriaTable('ISO 27701:2019 - Sistema de Gestión de Privacidad', iso27701Criteria)}
     </div>
   );
 }
