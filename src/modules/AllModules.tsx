@@ -34,6 +34,29 @@ export function Dashboard() {
   const severityData = { labels: ['Baja', 'Media', 'Alta'], datasets: [{ data: ['Baja', 'Media', 'Alta'].map(s => incidents.filter((i: Incident) => i.severidad === s).length), backgroundColor: ['#22c55e', '#eab308', '#ef4444'] }] };
   const maturityData = { labels: maturity.map((m: any) => m.nombre.substring(0, 12)), datasets: [{ label: 'Nivel', data: maturity.map((m: any) => m.nivel), backgroundColor: maturity.map((m: any) => m.nivel >= 4 ? '#22c55e' : m.nivel >= 3 ? '#3b82f6' : m.nivel >= 2 ? '#eab308' : '#ef4444') }] };
 
+  const handleExportDashboard = (format: 'excel' | 'pdf' | 'word') => {
+    const dashboardData = [
+      { Indicador: 'Cumplimiento Global', Valor: `${totalCompliance}%` },
+      { Indicador: 'Total Empleados', Valor: employees.length.toString() },
+      { Indicador: 'Total Activos', Valor: assets.length.toString() },
+      { Indicador: 'Tratamientos (RAT)', Valor: rats.length.toString() },
+      { Indicador: 'Incidentes Abiertos', Valor: incidentesAbiertos.toString() },
+      { Indicador: 'Consentimientos Pendientes', Valor: consentPendiente.toString() },
+      { Indicador: 'Riesgos Críticos', Valor: riesgosCriticos.toString() },
+      { Indicador: 'Documentos', Valor: documents.length.toString() },
+      { Indicador: 'Auditorías', Valor: audits.length.toString() },
+      { Indicador: 'Score Madurez', Valor: `${(maturity.reduce((a: number, b: any) => a + b.nivel, 0) / maturity.length).toFixed(2)}/5.0` },
+    ];
+
+    if (format === 'excel') {
+      exportToExcel(dashboardData, 'Dashboard_Ejecutivo', 'KPIs');
+    } else if (format === 'pdf') {
+      exportToPDF('Dashboard Ejecutivo - Resumen de Cumplimiento', dashboardData.map(d => ({ heading: d.Indicador, text: d.Valor })), 'Dashboard_Ejecutivo', company.razonSocial);
+    } else {
+      exportToWord('Dashboard Ejecutivo - Resumen de Cumplimiento', dashboardData.map(d => ({ heading: d.Indicador, text: d.Valor })), 'Dashboard_Ejecutivo');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-r from-slate-800 to-blue-900 rounded-xl p-5 text-white">
@@ -41,6 +64,11 @@ export function Dashboard() {
           <div><h3 className="text-lg font-bold">{company.nombreComercial}</h3><p className="text-blue-200 text-xs">{company.razonSocial} | RUC: {company.ruc}</p></div>
           <div className="text-right"><div className="text-3xl font-bold">{totalCompliance}%</div><p className="text-blue-200 text-xs">Cumplimiento</p></div>
         </div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => handleExportDashboard('excel')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"><i className="fas fa-file-excel mr-1"></i>Exportar Excel</button>
+        <button onClick={() => handleExportDashboard('pdf')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"><i className="fas fa-file-pdf mr-1"></i>Exportar PDF</button>
+        <button onClick={() => handleExportDashboard('word')} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"><i className="fas fa-file-word mr-1"></i>Exportar Word</button>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {kpis.map((k, i) => (
@@ -65,6 +93,33 @@ export function CompanyModule() {
 
   const handleSave = () => { updateCompany(form as any); setEditing(false); };
 
+  const handleExportCompany = (format: 'excel' | 'pdf' | 'word') => {
+    const companyData = [
+      { Campo: 'Razón Social', Valor: company.razonSocial },
+      { Campo: 'Nombre Comercial', Valor: company.nombreComercial },
+      { Campo: 'RUC', Valor: company.ruc },
+      { Campo: 'Domicilio Legal', Valor: company.domicilioLegal },
+      { Campo: 'Ciudad', Valor: company.ciudad },
+      { Campo: 'Provincia', Valor: company.provincia },
+      { Campo: 'Sector Económico', Valor: company.sectorEconomico },
+      { Campo: 'Tamaño', Valor: company.tamanoEmpresa },
+      { Campo: 'Representante Legal', Valor: company.representanteLegal },
+      { Campo: 'Responsable Cumplimiento', Valor: company.responsableCumplimiento },
+      { Campo: 'DPO', Valor: company.delegadoProteccionDatos },
+      { Campo: 'Email', Valor: company.email },
+      { Campo: 'Teléfono', Valor: company.telefono },
+      { Campo: 'Sitio Web', Valor: company.sitioWeb },
+    ];
+
+    if (format === 'excel') {
+      exportToExcel(companyData, 'Ficha_Empresarial', 'Empresa');
+    } else if (format === 'pdf') {
+      exportToPDF('Ficha Empresarial', companyData.map(d => ({ heading: d.Campo, text: d.Valor })), 'Ficha_Empresarial', company.razonSocial);
+    } else {
+      exportToWord('Ficha Empresarial', companyData.map(d => ({ heading: d.Campo, text: d.Valor })), 'Ficha_Empresarial');
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-5 text-white">
@@ -72,9 +127,20 @@ export function CompanyModule() {
         <div className="grid grid-cols-3 gap-3 mt-3">{[{l:'Empleados',v:employees.length},{l:'Tratamientos',v:rats.length},{l:'Dim.≥3',v:`${maturity.filter((m:any)=>m.nivel>=3).length}/${maturity.length}`}].map((s,i)=><div key={i} className="bg-white/10 rounded p-2 text-center"><p className="text-xl font-bold">{s.v}</p><p className="text-xs text-blue-200">{s.l}</p></div>)}</div>
       </div>
       <div className="bg-white rounded-lg border">
-        <div className="flex justify-between p-4 border-b"><h4 className="font-semibold"><i className="fas fa-building mr-2 text-blue-600"></i>Ficha Empresarial</h4>
-          {!editing ? <button onClick={() => { setForm(company); setEditing(true); }} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm"><i className="fas fa-edit mr-1"></i>Editar</button> :
-          <div className="flex gap-2"><button onClick={handleSave} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm"><i className="fas fa-save mr-1"></i>Guardar</button><button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-gray-200 rounded text-sm">Cancelar</button></div>}
+        <div className="flex justify-between p-4 border-b">
+          <h4 className="font-semibold"><i className="fas fa-building mr-2 text-blue-600"></i>Ficha Empresarial</h4>
+          <div className="flex gap-2">
+            {!editing ? (
+              <>
+                <button onClick={() => handleExportCompany('excel')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"><i className="fas fa-file-excel mr-1"></i>Excel</button>
+                <button onClick={() => handleExportCompany('pdf')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"><i className="fas fa-file-pdf mr-1"></i>PDF</button>
+                <button onClick={() => handleExportCompany('word')} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"><i className="fas fa-file-word mr-1"></i>Word</button>
+                <button onClick={() => { setForm(company); setEditing(true); }} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm"><i className="fas fa-edit mr-1"></i>Editar</button>
+              </>
+            ) : (
+              <div className="flex gap-2"><button onClick={handleSave} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm"><i className="fas fa-save mr-1"></i>Guardar</button><button onClick={() => setEditing(false)} className="px-3 py-1.5 bg-gray-200 rounded text-sm">Cancelar</button></div>
+            )}
+          </div>
         </div>
         <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           {[{l:'Razón Social',k:'razonSocial'},{l:'Nombre Comercial',k:'nombreComercial'},{l:'RUC',k:'ruc'},{l:'Domicilio',k:'domicilioLegal'},{l:'Ciudad',k:'ciudad'},{l:'Provincia',k:'provincia'},{l:'Sector',k:'sectorEconomico'},{l:'Tamaño',k:'tamanoEmpresa'},{l:'Representante Legal',k:'representanteLegal'},{l:'Resp. Cumplimiento',k:'responsableCumplimiento'},{l:'DPO',k:'delegadoProteccionDatos'},{l:'Email',k:'email'},{l:'Teléfono',k:'telefono'},{l:'Sitio Web',k:'sitioWeb'}].map(f => (
@@ -678,14 +744,37 @@ export function AuditModule() {
 
 // ==================== MATURITY ====================
 export function MaturityModule() {
-  const { maturity } = useEnterprise();
+  const { maturity, company } = useEnterprise();
   const globalScore = (maturity.reduce((a: number, b: any) => a + b.nivel, 0) / maturity.length).toFixed(2);
   const radarData = { labels: maturity.map((m: any) => m.nombre.substring(0, 15)), datasets: [{ label: 'Actual', data: maturity.map((m: any) => m.nivel), backgroundColor: 'rgba(59,130,246,0.2)', borderColor: 'rgba(59,130,246,1)', pointBackgroundColor: 'rgba(59,130,246,1)' }] };
+
+  const handleExportMaturity = (format: 'excel' | 'pdf' | 'word') => {
+    const maturityData = maturity.map((m: any) => ({
+      Dimensión: m.nombre,
+      Nivel: m.nivel,
+      Estado: ['Inexistente', 'Inicial', 'Repetible', 'Definido', 'Gestionado', 'Optimizado'][m.nivel],
+      Descripción: m.descripcion,
+      Evidencias: m.evidencias?.join(', ') || 'N/A'
+    }));
+
+    if (format === 'excel') {
+      exportToExcel(maturityData, 'Evaluacion_Madurez', 'Madurez');
+    } else if (format === 'pdf') {
+      exportToPDF('Evaluación de Madurez del Cumplimiento', maturityData.map(d => ({ heading: d.Dimensión, text: `Nivel: ${d.Nivel}/5 - ${d.Estado}\n${d.Descripción}\nEvidencias: ${d.Evidencias}` })), 'Evaluacion_Madurez', company?.razonSocial);
+    } else {
+      exportToWord('Evaluación de Madurez del Cumplimiento', maturityData.map(d => ({ heading: d.Dimensión, text: `Nivel: ${d.Nivel}/5 - ${d.Estado}\n${d.Descripción}\nEvidencias: ${d.Evidencias}` })), 'Evaluacion_Madurez');
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl p-5 text-white">
         <div className="flex justify-between items-center"><div><h3 className="text-lg font-bold">Madurez del Cumplimiento</h3><p className="text-indigo-200 text-xs">Modelo 5 niveles - Guías SPDP</p></div><div className="text-center"><p className="text-3xl font-bold">{globalScore}</p><p className="text-indigo-200 text-xs">/ 5.0</p></div></div>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => handleExportMaturity('excel')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700"><i className="fas fa-file-excel mr-1"></i>Exportar Excel</button>
+        <button onClick={() => handleExportMaturity('pdf')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700"><i className="fas fa-file-pdf mr-1"></i>Exportar PDF</button>
+        <button onClick={() => handleExportMaturity('word')} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"><i className="fas fa-file-word mr-1"></i>Exportar Word</button>
       </div>
       <div className="bg-white rounded-lg border p-4"><h4 className="font-semibold text-sm mb-2">Radar de Madurez</h4><div className="h-64"><Radar data={radarData} options={{ responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 } } } }} /></div></div>
       <div className="bg-white rounded-lg border overflow-hidden">
