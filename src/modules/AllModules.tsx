@@ -5,6 +5,7 @@ import { useStore } from '../store/store';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, RadialLinearScale, Filler, Title, Tooltip, Legend } from 'chart.js';
 import { Bar, Doughnut, Radar } from 'react-chartjs-2';
 import { exportToExcel, importFromExcel, exportToWord, exportToPDF, exportToJSON, exportMultipleSheets } from '../utils/exportUtils';
+import { generateAuditReportPDF, generateAuditReportWord } from '../utils/auditReportUtils';
 import type { Employee, Asset, RAT, Incident, Risk, Document as DocType } from '../data/demoData';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, RadialLinearScale, Filler, Title, Tooltip, Legend);
@@ -395,7 +396,6 @@ export function IncidentsModule() {
 
 // ==================== AUDIT ====================
 import { lopdpCriteria, iso27001Criteria, iso27002Criteria, iso27701Criteria } from '../data/auditCriteria';
-import { generateAuditReportPDF, generateAuditReportWord } from '../utils/auditReportUtils';
 
 export function AuditModule() {
   const { audits, addAudit, deleteAudit, company } = useEnterprise();
