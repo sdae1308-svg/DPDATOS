@@ -18,6 +18,7 @@ export function useEnterprise() {
       maturity: [],
       arcoRequests: [],
       actionPlans: [],
+      eipds: [],
       // Actions
       updateCompany: () => {},
       addEmployee: () => {},
@@ -48,6 +49,9 @@ export function useEnterprise() {
       addActionPlan: () => {},
       updateActionPlan: () => {},
       deleteActionPlan: () => {},
+      addEIPD: () => {},
+      updateEIPD: () => {},
+      deleteEIPD: () => {},
     };
   }
 
@@ -63,6 +67,7 @@ export function useEnterprise() {
     maturity: enterprise.maturity,
     arcoRequests: enterprise.arcoRequests,
     actionPlans: enterprise.actionPlans,
+    eipds: enterprise.eipds,
     // Actions
     updateCompany: store.updateCompany,
     addEmployee: store.addEmployee,
@@ -93,5 +98,8 @@ export function useEnterprise() {
     addActionPlan: store.addActionPlan,
     updateActionPlan: store.updateActionPlan,
     deleteActionPlan: store.deleteActionPlan,
+    addEIPD: store.addEIPD,
+    updateEIPD: store.updateEIPD,
+    deleteEIPD: store.deleteEIPD,
   };
 }

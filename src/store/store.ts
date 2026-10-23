@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { demoCompany, demoEmployees, demoAssets, demoRATs, demoIncidents, demoRisks, demoAudits, demoDocuments, demoMaturity, demoARCORequests, demoActionPlans } from '../data/demoData';
-import type { Company, Employee, Asset, RAT, Incident, Risk, Audit, Document, MaturityDimension, ARCORequest, ActionPlan } from '../data/demoData';
+import { demoCompany, demoEmployees, demoAssets, demoRATs, demoIncidents, demoRisks, demoAudits, demoDocuments, demoMaturity, demoARCORequests, demoActionPlans, demoEIPDs } from '../data/demoData';
+import type { Company, Employee, Asset, RAT, Incident, Risk, Audit, Document, MaturityDimension, ARCORequest, ActionPlan, EIPD } from '../data/demoData';
 
 // ============ TIPOS MULTIEMPRESA ============
 
@@ -30,6 +30,7 @@ export interface Enterprise {
   maturity: MaturityDimension[];
   arcoRequests: ARCORequest[];
   actionPlans: ActionPlan[];
+  eipds: EIPD[];
   fechaCreacion: string;
 }
 
@@ -102,6 +103,11 @@ interface AppState {
   updateActionPlan: (id: string, p: Partial<ActionPlan>) => void;
   deleteActionPlan: (id: string) => void;
   
+  // EIPD
+  addEIPD: (e: EIPD) => void;
+  updateEIPD: (id: string, e: Partial<EIPD>) => void;
+  deleteEIPD: (id: string) => void;
+  
   // Logs
   addLog: (action: string, module: string, detail: string) => void;
   // Helpers
@@ -124,6 +130,7 @@ const defaultEnterprise: Enterprise = {
   maturity: demoMaturity,
   arcoRequests: demoARCORequests,
   actionPlans: demoActionPlans,
+  eipds: demoEIPDs,
   fechaCreacion: new Date().toISOString()
 };
 
@@ -205,6 +212,7 @@ export const useStore = create<AppState>()(
           maturity: demoMaturity.map(m => ({ ...m, nivel: 0 })),
           arcoRequests: [],
           actionPlans: [],
+          eipds: [],
           fechaCreacion: new Date().toISOString()
         };
         set({ enterprises: [...state.enterprises, newEnt], logs: [...state.logs, addLogEntry(state, 'Crear', 'Empresas', `Empresa ${company.nombreComercial}`)] });
@@ -338,6 +346,20 @@ export const useStore = create<AppState>()(
       deleteActionPlan: (id) => {
         const state = get();
         set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, actionPlans: ent.actionPlans.filter(p => p.id !== id) })), logs: [...state.logs, addLogEntry(state, 'Eliminar', 'Plan de Acción', `Plan ${id}`)] });
+      },
+      
+      // EIPD
+      addEIPD: (e) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, eipds: [...ent.eipds, e] })), logs: [...state.logs, addLogEntry(state, 'Crear', 'EIPD', `Evaluación ${e.nombre}`)] });
+      },
+      updateEIPD: (id, data) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, eipds: ent.eipds.map(e => e.id === id ? { ...e, ...data } : e) })), logs: [...state.logs, addLogEntry(state, 'Editar', 'EIPD', `Evaluación ${id}`)] });
+      },
+      deleteEIPD: (id) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, eipds: ent.eipds.filter(e => e.id !== id) })), logs: [...state.logs, addLogEntry(state, 'Eliminar', 'EIPD', `Evaluación ${id}`)] });
       },
 
       addLog: (action, module, detail) => {

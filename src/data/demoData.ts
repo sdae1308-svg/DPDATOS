@@ -360,6 +360,26 @@ export interface ActionPlan {
   observaciones: string;
 }
 
+export interface EIPD {
+  id: string;
+  nombre: string;
+  tratamiento: string;
+  descripcion: string;
+  responsable: string;
+  fechaEvaluacion: string;
+  datosEspeciales: boolean;
+  transferenciasInternacionales: boolean;
+  monitoreoSistematico: boolean;
+  decisionesAutomatizadas: boolean;
+  granEscala: boolean;
+  riesgos: { id: string; descripcion: string; probabilidad: number; impacto: number; medidas: string }[];
+  medidasImplementadas: string;
+  medidasPropuestas: string;
+  riesgoResidual: string;
+  conclusion: string;
+  estado: 'En evaluación' | 'Aprobada' | 'Requiere revisión' | 'No requerida';
+}
+
 // ============ DATOS DEMO ARCO ============
 export const demoARCORequests: ARCORequest[] = [
   { id: 'ARCO-001', codigo: 'ARCO-2025-001', fechaSolicitud: '2025-09-15', fechaLimiteRespuesta: '2025-09-30', fechaRespuesta: '2025-09-28', titularNombre: 'Juan Pérez Martínez', titularCedula: '1712345678', titularEmail: 'jperez@email.com', titularTelefono: '+593 99 1234567', tipoDerecho: 'Acceso', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito conocer qué datos personales míos están siendo tratados y con qué finalidad.', estado: 'Cerrada', respuesta: 'Se proporcionó información completa de los datos tratados, finalidades y plazos de conservación mediante oficio Nro. 2025-001.', responsable: 'María Fernanda Andrade', observaciones: 'Respondido dentro del plazo legal de 15 días', diasTranscurridos: 13 },
@@ -368,6 +388,54 @@ export const demoARCORequests: ARCORequest[] = [
   { id: 'ARCO-004', codigo: 'ARCO-2026-001', fechaSolicitud: '2026-01-08', fechaLimiteRespuesta: '2026-01-23', fechaRespuesta: '', titularNombre: 'Patricia Morales Vega', titularCedula: '1745678901', titularEmail: 'pmorales@email.com', titularTelefono: '+593 96 4567890', tipoDerecho: 'Oposición', tratamientoRelacionado: 'RAT-006', descripcion: 'Me opongo al tratamiento de mis datos para fines de marketing directo.', estado: 'En proceso', respuesta: '', responsable: 'Fernando Alejandro Ruiz', observaciones: 'En análisis de procedencia', diasTranscurridos: 14 },
   { id: 'ARCO-005', codigo: 'ARCO-2026-002', fechaSolicitud: '2026-01-18', fechaLimiteRespuesta: '2026-02-02', fechaRespuesta: '', titularNombre: 'Luis Herrera Castro', titularCedula: '1756789012', titularEmail: 'lherrera@email.com', titularTelefono: '+593 95 5678901', tipoDerecho: 'Acceso', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito información completa sobre el tratamiento de mis datos personales, incluyendo categorías de datos, finalidades y destinatarios.', estado: 'Recibida', respuesta: '', responsable: 'María Fernanda Andrade', observaciones: 'Pendiente análisis inicial', diasTranscurridos: 4 },
   { id: 'ARCO-006', codigo: 'ARCO-2025-004', fechaSolicitud: '2025-08-20', fechaLimiteRespuesta: '2025-09-04', fechaRespuesta: '', titularNombre: 'Andrea Jiménez Ponce', titularCedula: '1767890123', titularEmail: 'ajimenez@email.com', titularTelefono: '+593 94 6789012', tipoDerecho: 'Cancelación', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito la eliminación completa de mis datos personales.', estado: 'Vencida', respuesta: '', responsable: 'María Fernanda Andrade', observaciones: 'VENCIDA - Requiere atención inmediata', diasTranscurridos: 155 }
+];
+
+// ============ DATOS DEMO EVALUACIONES DE IMPACTO (EIPD) ============
+export const demoEIPDs: EIPD[] = [
+  {
+    id: 'EIPD-001',
+    nombre: 'Evaluación de Impacto - Sistema Biométrico',
+    tratamiento: 'RAT-005',
+    descripcion: 'Evaluación del tratamiento de datos biométricos para control de asistencia mediante huella dactilar',
+    responsable: 'Roberto Salazar Espinoza',
+    fechaEvaluacion: '2025-11-15',
+    datosEspeciales: true,
+    transferenciasInternacionales: false,
+    monitoreoSistematico: true,
+    decisionesAutomatizadas: false,
+    granEscala: false,
+    riesgos: [
+      { id: 'R1', descripcion: 'Acceso no autorizado a templates biométricos', probabilidad: 3, impacto: 5, medidas: 'Cifrado de templates, control de acceso estricto' },
+      { id: 'R2', descripcion: 'Uso indebido de datos biométricos', probabilidad: 2, impacto: 5, medidas: 'Política de uso, auditoría de accesos' }
+    ],
+    medidasImplementadas: 'Cifrado AES-256 de templates, control de acceso por roles, no almacenamiento de imágenes faciales',
+    medidasPropuestas: 'Implementar autenticación multifactor, realizar pentest anual',
+    riesgoResidual: 'Medio',
+    conclusion: 'El tratamiento presenta riesgos que pueden ser mitigados con las medidas implementadas. Se recomienda mantener las medidas propuestas para reducir el riesgo residual.',
+    estado: 'Aprobada'
+  },
+  {
+    id: 'EIPD-002',
+    nombre: 'Evaluación de Impacto - App Móvil',
+    tratamiento: 'RAT-001',
+    descripcion: 'Evaluación del tratamiento de datos personales a través de la aplicación móvil para clientes',
+    responsable: 'Roberto Salazar Espinoza',
+    fechaEvaluacion: '2025-12-01',
+    datosEspeciales: true,
+    transferenciasInternacionales: true,
+    monitoreoSistematico: true,
+    decisionesAutomatizadas: true,
+    granEscala: true,
+    riesgos: [
+      { id: 'R1', descripcion: 'Robo o pérdida de dispositivo móvil', probabilidad: 4, impacto: 4, medidas: 'Cifrado en dispositivo, borrado remoto' },
+      { id: 'R2', descripcion: 'Interceptación de comunicaciones', probabilidad: 3, impacto: 5, medidas: 'Cifrado end-to-end, certificados SSL' }
+    ],
+    medidasImplementadas: 'Cifrado end-to-end, biometría para acceso, borrado remoto',
+    medidasPropuestas: 'Implementar detección de jailbreak/root, análisis de malware en tiempo real',
+    riesgoResidual: 'Alto',
+    conclusion: 'La aplicación presenta riesgos significativos que requieren medidas adicionales. Se debe implementar el plan de mejora antes de continuar con el tratamiento.',
+    estado: 'Requiere revisión'
+  }
 ];
 
 // ============ DATOS DEMO PLAN DE ACCIÓN ============

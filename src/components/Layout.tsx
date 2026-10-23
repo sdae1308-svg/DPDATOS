@@ -18,9 +18,11 @@ const menuItems = [
   { id: 'arco', label: 'Derechos ARCO', icon: 'fa-user-check' },
   { id: 'incidents', label: 'Incidentes/Riesgos', icon: 'fa-shield-halved' },
   { id: 'actionplan', label: 'Plan de Acción', icon: 'fa-tasks' },
+  { id: 'eipd', label: 'Evaluaciones de Impacto', icon: 'fa-clipboard-check' },
   { id: 'audit', label: 'Auditoría', icon: 'fa-magnifying-glass-chart' },
   { id: 'maturity', label: 'Madurez', icon: 'fa-chart-simple' },
   { id: 'documents', label: 'Documentos', icon: 'fa-file-lines' },
+  { id: 'alerts', label: 'Alertas', icon: 'fa-bell' },
   { id: 'admin', label: 'Administración', icon: 'fa-cog' },
   { id: 'logs', label: 'Bitácora', icon: 'fa-clock-rotate-left' },
 ];
