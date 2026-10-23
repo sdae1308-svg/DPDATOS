@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { demoCompany, demoEmployees, demoAssets, demoRATs, demoIncidents, demoRisks, demoAudits, demoDocuments, demoMaturity } from '../data/demoData';
-import type { Company, Employee, Asset, RAT, Incident, Risk, Audit, Document, MaturityDimension } from '../data/demoData';
+import { demoCompany, demoEmployees, demoAssets, demoRATs, demoIncidents, demoRisks, demoAudits, demoDocuments, demoMaturity, demoARCORequests, demoActionPlans } from '../data/demoData';
+import type { Company, Employee, Asset, RAT, Incident, Risk, Audit, Document, MaturityDimension, ARCORequest, ActionPlan } from '../data/demoData';
 
 // ============ TIPOS MULTIEMPRESA ============
 
@@ -28,6 +28,8 @@ export interface Enterprise {
   audits: Audit[];
   documents: Document[];
   maturity: MaturityDimension[];
+  arcoRequests: ARCORequest[];
+  actionPlans: ActionPlan[];
   fechaCreacion: string;
 }
 
@@ -89,10 +91,19 @@ interface AppState {
   updateDocument: (id: string, d: Partial<Document>) => void;
   deleteDocument: (id: string) => void;
   updateMaturity: (dims: MaturityDimension[]) => void;
-
+  
+  // ARCO Requests
+  addARCORequest: (r: ARCORequest) => void;
+  updateARCORequest: (id: string, r: Partial<ARCORequest>) => void;
+  deleteARCORequest: (id: string) => void;
+  
+  // Action Plans
+  addActionPlan: (p: ActionPlan) => void;
+  updateActionPlan: (id: string, p: Partial<ActionPlan>) => void;
+  deleteActionPlan: (id: string) => void;
+  
   // Logs
   addLog: (action: string, module: string, detail: string) => void;
-
   // Helpers
   getActiveEnterprise: () => Enterprise | null;
   resetToDemo: () => void;
@@ -111,6 +122,8 @@ const defaultEnterprise: Enterprise = {
   audits: demoAudits,
   documents: demoDocuments,
   maturity: demoMaturity,
+  arcoRequests: demoARCORequests,
+  actionPlans: demoActionPlans,
   fechaCreacion: new Date().toISOString()
 };
 
@@ -190,6 +203,8 @@ export const useStore = create<AppState>()(
           audits: [],
           documents: [],
           maturity: demoMaturity.map(m => ({ ...m, nivel: 0 })),
+          arcoRequests: [],
+          actionPlans: [],
           fechaCreacion: new Date().toISOString()
         };
         set({ enterprises: [...state.enterprises, newEnt], logs: [...state.logs, addLogEntry(state, 'Crear', 'Empresas', `Empresa ${company.nombreComercial}`)] });
@@ -295,6 +310,34 @@ export const useStore = create<AppState>()(
       updateMaturity: (dims) => {
         const state = get();
         set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, maturity: dims })) });
+      },
+
+      // ARCO Requests
+      addARCORequest: (r) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, arcoRequests: [...ent.arcoRequests, r] })), logs: [...state.logs, addLogEntry(state, 'Crear', 'Derechos ARCO', `Solicitud ${r.codigo}`)] });
+      },
+      updateARCORequest: (id, data) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, arcoRequests: ent.arcoRequests.map(r => r.id === id ? { ...r, ...data } : r) })), logs: [...state.logs, addLogEntry(state, 'Editar', 'Derechos ARCO', `Solicitud ${id}`)] });
+      },
+      deleteARCORequest: (id) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, arcoRequests: ent.arcoRequests.filter(r => r.id !== id) })), logs: [...state.logs, addLogEntry(state, 'Eliminar', 'Derechos ARCO', `Solicitud ${id}`)] });
+      },
+
+      // Action Plans
+      addActionPlan: (p) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, actionPlans: [...ent.actionPlans, p] })), logs: [...state.logs, addLogEntry(state, 'Crear', 'Plan de Acción', `Plan ${p.codigo}`)] });
+      },
+      updateActionPlan: (id, data) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, actionPlans: ent.actionPlans.map(p => p.id === id ? { ...p, ...data } : p) })), logs: [...state.logs, addLogEntry(state, 'Editar', 'Plan de Acción', `Plan ${id}`)] });
+      },
+      deleteActionPlan: (id) => {
+        const state = get();
+        set({ enterprises: updateActiveEnterprise(state, ent => ({ ...ent, actionPlans: ent.actionPlans.filter(p => p.id !== id) })), logs: [...state.logs, addLogEntry(state, 'Eliminar', 'Plan de Acción', `Plan ${id}`)] });
       },
 
       addLog: (action, module, detail) => {

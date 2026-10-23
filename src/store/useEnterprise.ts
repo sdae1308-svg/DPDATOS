@@ -16,6 +16,8 @@ export function useEnterprise() {
       audits: [],
       documents: [],
       maturity: [],
+      arcoRequests: [],
+      actionPlans: [],
       // Actions
       updateCompany: () => {},
       addEmployee: () => {},
@@ -40,6 +42,12 @@ export function useEnterprise() {
       updateDocument: () => {},
       deleteDocument: () => {},
       updateMaturity: () => {},
+      addARCORequest: () => {},
+      updateARCORequest: () => {},
+      deleteARCORequest: () => {},
+      addActionPlan: () => {},
+      updateActionPlan: () => {},
+      deleteActionPlan: () => {},
     };
   }
 
@@ -53,6 +61,8 @@ export function useEnterprise() {
     audits: enterprise.audits,
     documents: enterprise.documents,
     maturity: enterprise.maturity,
+    arcoRequests: enterprise.arcoRequests,
+    actionPlans: enterprise.actionPlans,
     // Actions
     updateCompany: store.updateCompany,
     addEmployee: store.addEmployee,
@@ -77,5 +87,11 @@ export function useEnterprise() {
     updateDocument: store.updateDocument,
     deleteDocument: store.deleteDocument,
     updateMaturity: store.updateMaturity,
+    addARCORequest: store.addARCORequest,
+    updateARCORequest: store.updateARCORequest,
+    deleteARCORequest: store.deleteARCORequest,
+    addActionPlan: store.addActionPlan,
+    updateActionPlan: store.updateActionPlan,
+    deleteActionPlan: store.deleteActionPlan,
   };
 }
