@@ -3,267 +3,286 @@ import { useEnterprise } from '../store/useEnterprise';
 
 interface Alert {
   id: string;
-  type: 'warning' | 'danger' | 'info' | 'success';
+  type: 'critical' | 'warning' | 'info';
+  category: string;
   title: string;
-  message: string;
-  module: string;
+  description: string;
   date: string;
-  read: boolean;
+  dueDate?: string;
+  status: 'pending' | 'resolved' | 'dismissed';
+  module: string;
 }
 
-export default function AlertsModule() {
-  const { employees, incidents, risks, audits, actionPlans, arcoRequests } = useEnterprise();
+export function AlertsModule() {
+  const { employees, assets, rats, incidents, risks, documents } = useEnterprise();
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
+  const [filter, setFilter] = useState<'all' | 'critical' | 'warning' | 'info'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'resolved' | 'dismissed'>('pending');
 
   useEffect(() => {
     generateAlerts();
-  }, [employees, incidents, risks, audits, actionPlans, arcoRequests]);
+  }, [employees, assets, rats, incidents, risks, documents]);
 
   const generateAlerts = () => {
     const newAlerts: Alert[] = [];
     const today = new Date();
 
-    // Alertas de empleados con consentimiento pendiente
-    const employeesWithoutConsent = employees.filter((e: any) => !e.consentimientoFirmado || !e.confidencialidadFirmada);
-    if (employeesWithoutConsent.length > 0) {
-      newAlerts.push({
-        id: 'alert-consent-' + Date.now(),
-        type: 'warning',
-        title: 'Consentimientos Pendientes',
-        message: `${employeesWithoutConsent.length} empleado(s) no han firmado el consentimiento o acuerdo de confidencialidad`,
-        module: 'Empleados',
-        date: today.toISOString(),
-        read: false
-      });
-    }
+    // Empleados sin consentimiento
+    employees.forEach(emp => {
+      if (!emp.consentimientoFirmado) {
+        newAlerts.push({
+          id: `ALERT-EMP-${emp.id}`,
+          type: 'critical',
+          category: 'Consentimiento',
+          title: `Empleado sin consentimiento: ${emp.nombre}`,
+          description: `El empleado ${emp.nombre} (${emp.cargo}) no ha firmado el consentimiento para el tratamiento de datos personales`,
+          date: today.toISOString(),
+          status: 'pending',
+          module: 'Empleados'
+        });
+      }
+    });
 
-    // Alertas de incidentes abiertos
-    const openIncidents = incidents.filter((i: any) => i.estado === 'Abierto');
-    if (openIncidents.length > 0) {
-      newAlerts.push({
-        id: 'alert-incidents-' + Date.now(),
-        type: 'danger',
-        title: 'Incidentes Abiertos',
-        message: `${openIncidents.length} incidente(s) de seguridad abierto(s) requieren atención`,
-        module: 'Incidentes',
-        date: today.toISOString(),
-        read: false
-      });
-    }
+    // Activos críticos sin amenazas identificadas
+    assets.forEach(asset => {
+      if (asset.criticidad === 'Alta' && asset.amenazas.length === 0) {
+        newAlerts.push({
+          id: `ALERT-ASSET-${asset.id}`,
+          type: 'critical',
+          category: 'Riesgos',
+          title: `Activo crítico sin evaluación: ${asset.nombre}`,
+          description: `El activo crítico ${asset.nombre} no tiene amenazas identificadas`,
+          date: today.toISOString(),
+          status: 'pending',
+          module: 'Activos'
+        });
+      }
+    });
 
-    // Alertas de riesgos no aceptables
-    const unacceptableRisks = risks.filter((r: any) => r.nivelAceptacion === 'No aceptable');
-    if (unacceptableRisks.length > 0) {
-      newAlerts.push({
-        id: 'alert-risks-' + Date.now(),
-        type: 'danger',
-        title: 'Riesgos No Aceptables',
-        message: `${unacceptableRisks.length} riesgo(s) clasificado(s) como no aceptable(s)`,
-        module: 'Riesgos',
-        date: today.toISOString(),
-        read: false
-      });
-    }
+    // Incidentes abiertos
+    incidents.forEach(inc => {
+      if (inc.estado === 'Abierto') {
+        newAlerts.push({
+          id: `ALERT-INC-${inc.id}`,
+          type: 'critical',
+          category: 'Incidentes',
+          title: `Incidente abierto: ${inc.codigo}`,
+          description: `Incidente de ${inc.tipo} con estado abierto desde ${inc.fechaDeteccion}`,
+          date: today.toISOString(),
+          status: 'pending',
+          module: 'Incidentes'
+        });
+      }
+    });
 
-    // Alertas de planes de acción vencidos o próximos a vencer
-    const todayStr = today.toISOString().split('T')[0];
-    actionPlans.forEach((plan: any) => {
-      if (plan.estado !== 'Completada' && plan.fechaCompromiso) {
-        const commitDate = new Date(plan.fechaCompromiso);
-        const daysDiff = Math.ceil((commitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // Riesgos altos sin tratamiento
+    risks.forEach(risk => {
+      if (risk.riesgoInherente >= 15 && !risk.tratamientoRiesgo) {
+        newAlerts.push({
+          id: `ALERT-RISK-${risk.id}`,
+          type: 'critical',
+          category: 'Riesgos',
+          title: `Riesgo alto sin tratamiento: ${risk.nombre}`,
+          description: `El riesgo ${risk.nombre} tiene nivel alto (${risk.riesgoInherente}) y no tiene plan de tratamiento definido`,
+          date: today.toISOString(),
+          status: 'pending',
+          module: 'Riesgos'
+        });
+      }
+    });
+
+    // Documentos próximos a vencer
+    documents.forEach(doc => {
+      if (doc.fechaRevision) {
+        const revisionDate = new Date(doc.fechaRevision);
+        const daysUntilRevision = Math.ceil((revisionDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff < 0) {
+        if (daysUntilRevision <= 30 && daysUntilRevision > 0) {
           newAlerts.push({
-            id: `alert-plan-overdue-${plan.id}`,
-            type: 'danger',
-            title: 'Plan de Acción Vencido',
-            message: `"${plan.titulo}" venció hace ${Math.abs(daysDiff)} día(s)`,
-            module: 'Plan de Acción',
-            date: today.toISOString(),
-            read: false
-          });
-        } else if (daysDiff <= 7) {
-          newAlerts.push({
-            id: `alert-plan-due-${plan.id}`,
+            id: `ALERT-DOC-${doc.id}`,
             type: 'warning',
-            title: 'Plan de Acción Próximo a Vencer',
-            message: `"${plan.titulo}" vence en ${daysDiff} día(s)`,
-            module: 'Plan de Acción',
+            category: 'Documentos',
+            title: `Documento próximo a revisión: ${doc.nombre}`,
+            description: `El documento debe ser revisado en ${daysUntilRevision} días (${doc.fechaRevision})`,
             date: today.toISOString(),
-            read: false
+            dueDate: doc.fechaRevision,
+            status: 'pending',
+            module: 'Documentos'
+          });
+        } else if (daysUntilRevision <= 0) {
+          newAlerts.push({
+            id: `ALERT-DOC-${doc.id}`,
+            type: 'critical',
+            category: 'Documentos',
+            title: `Documento vencido: ${doc.nombre}`,
+            description: `El documento venció el ${doc.fechaRevision} y requiere revisión inmediata`,
+            date: today.toISOString(),
+            dueDate: doc.fechaRevision,
+            status: 'pending',
+            module: 'Documentos'
           });
         }
       }
     });
 
-    // Alertas de solicitudes ARCO próximas a vencer
-    arcoRequests.forEach((request: any) => {
-      if (request.estado !== 'Atendida' && request.fechaLimite) {
-        const limitDate = new Date(request.fechaLimite);
-        const daysDiff = Math.ceil((limitDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // RAT sin revisión anual
+    rats.forEach(rat => {
+      if (rat.fechaRevision) {
+        const revisionDate = new Date(rat.fechaRevision);
+        const daysUntilRevision = Math.ceil((revisionDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff < 0) {
+        if (daysUntilRevision <= 60 && daysUntilRevision > 0) {
           newAlerts.push({
-            id: `alert-arco-overdue-${request.id}`,
-            type: 'danger',
-            title: 'Solicitud ARCO Vencida',
-            message: `La solicitud ${request.codigo} venció hace ${Math.abs(daysDiff)} día(s)`,
-            module: 'Derechos ARCO',
-            date: today.toISOString(),
-            read: false
-          });
-        } else if (daysDiff <= 5) {
-          newAlerts.push({
-            id: `alert-arco-due-${request.id}`,
+            id: `ALERT-RAT-${rat.id}`,
             type: 'warning',
-            title: 'Solicitud ARCO Próxima a Vencer',
-            message: `La solicitud ${request.codigo} vence en ${daysDiff} día(s)`,
-            module: 'Derechos ARCO',
+            category: 'RAT',
+            title: `RAT próximo a revisión: ${rat.nombre}`,
+            description: `El registro de tratamiento debe ser revisado en ${daysUntilRevision} días`,
             date: today.toISOString(),
-            read: false
+            dueDate: rat.fechaRevision,
+            status: 'pending',
+            module: 'RAT'
           });
         }
       }
     });
-
-    // Alertas de hallazgos de auditoría abiertos
-    const openFindings = audits.flatMap((a: any) => a.hallazgos?.filter((h: any) => h.estado === 'Abierto') || []);
-    if (openFindings.length > 0) {
-      newAlerts.push({
-        id: 'alert-findings-' + Date.now(),
-        type: 'warning',
-        title: 'Hallazgos de Auditoría Abiertos',
-        message: `${openFindings.length} hallazgo(s) de auditoría abierto(s)`,
-        module: 'Auditoría',
-        date: today.toISOString(),
-        read: false
-      });
-    }
 
     setAlerts(newAlerts);
   };
 
-  const markAsRead = (id: string) => {
-    setAlerts(alerts.map(a => a.id === id ? { ...a, read: true } : a));
+  const handleResolve = (id: string) => {
+    setAlerts(alerts.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
   };
 
-  const markAllAsRead = () => {
-    setAlerts(alerts.map(a => ({ ...a, read: true })));
+  const handleDismiss = (id: string) => {
+    setAlerts(alerts.map(a => a.id === id ? { ...a, status: 'dismissed' } : a));
   };
 
   const filteredAlerts = alerts.filter(a => {
-    if (filter === 'unread') return !a.read;
-    if (filter === 'read') return a.read;
-    return true;
+    const typeMatch = filter === 'all' || a.type === filter;
+    const statusMatch = statusFilter === 'all' || a.status === statusFilter;
+    return typeMatch && statusMatch;
   });
 
-  const unreadCount = alerts.filter(a => !a.read).length;
-
-  const getAlertIcon = (type: string) => {
-    switch (type) {
-      case 'danger': return 'fa-exclamation-triangle text-red-600';
-      case 'warning': return 'fa-exclamation-circle text-yellow-600';
-      case 'info': return 'fa-info-circle text-blue-600';
-      case 'success': return 'fa-check-circle text-green-600';
-      default: return 'fa-bell text-gray-600';
-    }
-  };
-
-  const getAlertBg = (type: string) => {
-    switch (type) {
-      case 'danger': return 'bg-red-50 border-red-200';
-      case 'warning': return 'bg-yellow-50 border-yellow-200';
-      case 'info': return 'bg-blue-50 border-blue-200';
-      case 'success': return 'bg-green-50 border-green-200';
-      default: return 'bg-gray-50 border-gray-200';
-    }
-  };
+  const criticalCount = alerts.filter(a => a.type === 'critical' && a.status === 'pending').length;
+  const warningCount = alerts.filter(a => a.type === 'warning' && a.status === 'pending').length;
+  const infoCount = alerts.filter(a => a.type === 'info' && a.status === 'pending').length;
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border p-4">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">Centro de Alertas</h2>
-            <p className="text-sm text-gray-600">Notificaciones y recordatorios del sistema</p>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800">Alertas y Notificaciones</h2>
+        <div className="flex gap-2">
+          <div className="flex items-center gap-2 px-3 py-2 bg-red-100 rounded-lg">
+            <i className="fas fa-exclamation-circle text-red-600"></i>
+            <span className="text-sm font-medium text-red-700">{criticalCount} Críticas</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
-              {unreadCount} sin leer
-            </span>
-            <button
-              onClick={markAllAsRead}
-              className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            >
-              <i className="fas fa-check-double mr-1"></i>Marcar todas como leídas
-            </button>
+          <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 rounded-lg">
+            <i className="fas fa-exclamation-triangle text-yellow-600"></i>
+            <span className="text-sm font-medium text-yellow-700">{warningCount} Advertencias</span>
           </div>
-        </div>
-
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded text-sm ${filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-          >
-            Todas ({alerts.length})
-          </button>
-          <button
-            onClick={() => setFilter('unread')}
-            className={`px-3 py-1.5 rounded text-sm ${filter === 'unread' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-          >
-            Sin leer ({unreadCount})
-          </button>
-          <button
-            onClick={() => setFilter('read')}
-            className={`px-3 py-1.5 rounded text-sm ${filter === 'read' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
-          >
-            Leídas ({alerts.length - unreadCount})
-          </button>
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-100 rounded-lg">
+            <i className="fas fa-info-circle text-blue-600"></i>
+            <span className="text-sm font-medium text-blue-700">{infoCount} Info</span>
+          </div>
         </div>
       </div>
 
-      {filteredAlerts.length === 0 ? (
-        <div className="bg-white rounded-lg border p-8 text-center">
-          <i className="fas fa-bell-slash text-4xl text-gray-300 mb-3"></i>
-          <p className="text-gray-500">No hay alertas {filter === 'unread' ? 'sin leer' : filter === 'read' ? 'leídas' : ''}</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {filteredAlerts.map(alert => (
-            <div
-              key={alert.id}
-              className={`bg-white rounded-lg border-l-4 p-4 ${getAlertBg(alert.type)} ${!alert.read ? 'shadow-sm' : 'opacity-75'}`}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+            <select
+              value={filter}
+              onChange={e => setFilter(e.target.value as any)}
+              className="px-3 py-2 border rounded-lg"
             >
-              <div className="flex items-start gap-3">
-                <i className={`fas ${getAlertIcon(alert.type)} text-xl mt-1`}></i>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">{alert.title}</h3>
-                      <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
-                      <span className="inline-block mt-2 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">
-                        {alert.module}
+              <option value="all">Todos</option>
+              <option value="critical">Críticas</option>
+              <option value="warning">Advertencias</option>
+              <option value="info">Información</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as any)}
+              className="px-3 py-2 border rounded-lg"
+            >
+              <option value="all">Todos</option>
+              <option value="pending">Pendientes</option>
+              <option value="resolved">Resueltas</option>
+              <option value="dismissed">Descartadas</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredAlerts.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">
+              <i className="fas fa-check-circle text-4xl mb-3"></i>
+              <p>No hay alertas pendientes</p>
+            </div>
+          ) : (
+            filteredAlerts.map(alert => (
+              <div
+                key={alert.id}
+                className={`border-l-4 p-4 rounded-r-lg ${
+                  alert.type === 'critical' ? 'border-red-500 bg-red-50' :
+                  alert.type === 'warning' ? 'border-yellow-500 bg-yellow-50' :
+                  'border-blue-500 bg-blue-50'
+                } ${alert.status === 'resolved' ? 'opacity-60' : ''}`}
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        alert.type === 'critical' ? 'bg-red-200 text-red-800' :
+                        alert.type === 'warning' ? 'bg-yellow-200 text-yellow-800' :
+                        'bg-blue-200 text-blue-800'
+                      }`}>
+                        {alert.category}
                       </span>
+                      <span className="text-xs text-gray-500">{alert.module}</span>
+                      {alert.status === 'resolved' && (
+                        <span className="px-2 py-0.5 bg-green-200 text-green-800 rounded text-xs">Resuelta</span>
+                      )}
+                      {alert.status === 'dismissed' && (
+                        <span className="px-2 py-0.5 bg-gray-200 text-gray-800 rounded text-xs">Descartada</span>
+                      )}
                     </div>
-                    {!alert.read && (
-                      <button
-                        onClick={() => markAsRead(alert.id)}
-                        className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        <i className="fas fa-check mr-1"></i>Marcar como leída
-                      </button>
+                    <h4 className="font-semibold text-gray-800 mb-1">{alert.title}</h4>
+                    <p className="text-sm text-gray-600">{alert.description}</p>
+                    {alert.dueDate && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        <i className="fas fa-calendar mr-1"></i>
+                        Vence: {new Date(alert.dueDate).toLocaleDateString('es-EC')}
+                      </p>
                     )}
                   </div>
-                  <p className="text-xs text-gray-400 mt-2">
-                    {new Date(alert.date).toLocaleString('es-EC')}
-                  </p>
+                  {alert.status === 'pending' && (
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleResolve(alert.id)}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                      >
+                        Resolver
+                      </button>
+                      <button
+                        onClick={() => handleDismiss(alert.id)}
+                        className="px-3 py-1 bg-gray-400 text-white rounded text-sm hover:bg-gray-500"
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

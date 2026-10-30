@@ -4,8 +4,8 @@ import Login from './components/Login';
 import Layout from './components/Layout';
 import { Dashboard, CompanyModule, EmployeesModule, AssetsModule, RATModule, IncidentsModule, AuditModule, MaturityModule, DocumentsModule, LogsModule } from './modules/AllModules';
 import { ARCOModule, ActionPlanModule } from './modules/ARCOAndActionPlan';
-import EIPDModule from './modules/EIPDModule';
-import AlertsModule from './modules/AlertsModule';
+import { EIPDModule } from './modules/EIPDModule';
+import { AlertsModule } from './modules/AlertsModule';
 import AdminModule from './modules/AdminModule';
 import { setupAutoBackup, createBackup, saveBackupToLocalStorage, saveBackupToIndexedDB } from './utils/backupUtils';
 
