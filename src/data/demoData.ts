@@ -319,3 +319,171 @@ export const demoMaturity: MaturityDimension[] = [
   { nombre: 'Formación y Concienciación', nivel: 2, descripcion: 'Programa básico de capacitación, cobertura parcial', evidencias: ['70% empleados capacitados', 'Pendiente programa continuo', 'Sin evaluación de eficacia'] },
   { nombre: 'Mejora Continua', nivel: 1, descripcion: 'Sin mecanismo formal de revisión y mejora del programa de cumplimiento', evidencias: ['Acciones correctivas reactivas', 'Sin indicadores de mejora', 'Pendiente KPIs de eficacia'] }
 ];
+
+// ============ DERECHOS ARCO (LOPDP Arts. 16-20) ============
+export interface ARCORequest {
+  id: string;
+  codigo: string;
+  fechaSolicitud: string;
+  fechaLimiteRespuesta: string;
+  fechaRespuesta: string;
+  titularNombre: string;
+  titularCedula: string;
+  titularEmail: string;
+  titularTelefono: string;
+  tipoDerecho: 'Acceso' | 'Rectificación' | 'Cancelación' | 'Oposición' | 'Portabilidad' | 'Limitación';
+  tratamientoRelacionado: string;
+  descripcion: string;
+  estado: 'Recibida' | 'En análisis' | 'En proceso' | 'Respondida' | 'Cerrada' | 'Vencida';
+  respuesta: string;
+  responsable: string;
+  observaciones: string;
+  diasTranscurridos: number;
+}
+
+// ============ PLAN DE ACCIÓN ============
+export interface ActionPlan {
+  id: string;
+  codigo: string;
+  titulo: string;
+  descripcion: string;
+  origen: 'Auditoría' | 'Incidente' | 'Riesgo' | 'Hallazgo' | 'Mejora Continua' | 'Obligación Legal';
+  origenReferencia: string;
+  prioridad: 'Crítica' | 'Alta' | 'Media' | 'Baja';
+  responsable: string;
+  fechaCreacion: string;
+  fechaCompromiso: string;
+  fechaCierre: string;
+  estado: 'Pendiente' | 'En progreso' | 'Completada' | 'Vencida' | 'Cancelada';
+  progreso: number;
+  acciones: { fecha: string; descripcion: string; responsable: string; completada: boolean }[];
+  observaciones: string;
+}
+
+export interface EIPD {
+  id: string;
+  nombre: string;
+  tratamiento: string;
+  descripcion: string;
+  responsable: string;
+  fechaEvaluacion: string;
+  datosEspeciales: boolean;
+  transferenciasInternacionales: boolean;
+  monitoreoSistematico: boolean;
+  decisionesAutomatizadas: boolean;
+  granEscala: boolean;
+  riesgos: { id: string; descripcion: string; probabilidad: number; impacto: number; medidas: string }[];
+  medidasImplementadas: string;
+  medidasPropuestas: string;
+  riesgoResidual: string;
+  conclusion: string;
+  estado: 'En evaluación' | 'Aprobada' | 'Requiere revisión' | 'No requerida';
+}
+
+// ============ DATOS DEMO ARCO ============
+export const demoARCORequests: ARCORequest[] = [
+  { id: 'ARCO-001', codigo: 'ARCO-2025-001', fechaSolicitud: '2025-09-15', fechaLimiteRespuesta: '2025-09-30', fechaRespuesta: '2025-09-28', titularNombre: 'Juan Pérez Martínez', titularCedula: '1712345678', titularEmail: 'jperez@email.com', titularTelefono: '+593 99 1234567', tipoDerecho: 'Acceso', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito conocer qué datos personales míos están siendo tratados y con qué finalidad.', estado: 'Cerrada', respuesta: 'Se proporcionó información completa de los datos tratados, finalidades y plazos de conservación mediante oficio Nro. 2025-001.', responsable: 'María Fernanda Andrade', observaciones: 'Respondido dentro del plazo legal de 15 días', diasTranscurridos: 13 },
+  { id: 'ARCO-002', codigo: 'ARCO-2025-002', fechaSolicitud: '2025-10-05', fechaLimiteRespuesta: '2025-10-20', fechaRespuesta: '2025-10-18', titularNombre: 'María González López', titularCedula: '1723456789', titularEmail: 'mgonzalez@email.com', titularTelefono: '+593 98 2345678', tipoDerecho: 'Rectificación', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito rectificar mi dirección de correo electrónico que aparece incorrecta en sus registros.', estado: 'Cerrada', respuesta: 'Se rectificó el correo electrónico en todos los sistemas conforme a lo solicitado.', responsable: 'Ana Lucía Paredes', observaciones: 'Rectificación aplicada en CRM y BD', diasTranscurridos: 13 },
+  { id: 'ARCO-003', codigo: 'ARCO-2025-003', fechaSolicitud: '2025-11-10', fechaLimiteRespuesta: '2025-11-25', fechaRespuesta: '2025-11-22', titularNombre: 'Carlos Rodríguez Silva', titularCedula: '1734567890', titularEmail: 'crodriguez@email.com', titularTelefono: '+593 97 3456789', tipoDerecho: 'Cancelación', tratamientoRelacionado: 'RAT-006', descripcion: 'Solicito la eliminación de mis datos personales de su base de datos de marketing.', estado: 'Cerrada', respuesta: 'Se procedió a la eliminación de los datos personales del titular en la base de datos de marketing, manteniendo únicamente los datos necesarios para obligaciones legales.', responsable: 'Fernando Alejandro Ruiz', observaciones: 'Eliminación confirmada en CRM y Mailchimp', diasTranscurridos: 12 },
+  { id: 'ARCO-004', codigo: 'ARCO-2026-001', fechaSolicitud: '2026-01-08', fechaLimiteRespuesta: '2026-01-23', fechaRespuesta: '', titularNombre: 'Patricia Morales Vega', titularCedula: '1745678901', titularEmail: 'pmorales@email.com', titularTelefono: '+593 96 4567890', tipoDerecho: 'Oposición', tratamientoRelacionado: 'RAT-006', descripcion: 'Me opongo al tratamiento de mis datos para fines de marketing directo.', estado: 'En proceso', respuesta: '', responsable: 'Fernando Alejandro Ruiz', observaciones: 'En análisis de procedencia', diasTranscurridos: 14 },
+  { id: 'ARCO-005', codigo: 'ARCO-2026-002', fechaSolicitud: '2026-01-18', fechaLimiteRespuesta: '2026-02-02', fechaRespuesta: '', titularNombre: 'Luis Herrera Castro', titularCedula: '1756789012', titularEmail: 'lherrera@email.com', titularTelefono: '+593 95 5678901', tipoDerecho: 'Acceso', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito información completa sobre el tratamiento de mis datos personales, incluyendo categorías de datos, finalidades y destinatarios.', estado: 'Recibida', respuesta: '', responsable: 'María Fernanda Andrade', observaciones: 'Pendiente análisis inicial', diasTranscurridos: 4 },
+  { id: 'ARCO-006', codigo: 'ARCO-2025-004', fechaSolicitud: '2025-08-20', fechaLimiteRespuesta: '2025-09-04', fechaRespuesta: '', titularNombre: 'Andrea Jiménez Ponce', titularCedula: '1767890123', titularEmail: 'ajimenez@email.com', titularTelefono: '+593 94 6789012', tipoDerecho: 'Cancelación', tratamientoRelacionado: 'RAT-001', descripcion: 'Solicito la eliminación completa de mis datos personales.', estado: 'Vencida', respuesta: '', responsable: 'María Fernanda Andrade', observaciones: 'VENCIDA - Requiere atención inmediata', diasTranscurridos: 155 }
+];
+
+// ============ DATOS DEMO EVALUACIONES DE IMPACTO (EIPD) ============
+export const demoEIPDs: EIPD[] = [
+  {
+    id: 'EIPD-001',
+    nombre: 'Evaluación de Impacto - Sistema Biométrico',
+    tratamiento: 'RAT-005',
+    descripcion: 'Evaluación del tratamiento de datos biométricos para control de asistencia mediante huella dactilar',
+    responsable: 'Roberto Salazar Espinoza',
+    fechaEvaluacion: '2025-11-15',
+    datosEspeciales: true,
+    transferenciasInternacionales: false,
+    monitoreoSistematico: true,
+    decisionesAutomatizadas: false,
+    granEscala: false,
+    riesgos: [
+      { id: 'R1', descripcion: 'Acceso no autorizado a templates biométricos', probabilidad: 3, impacto: 5, medidas: 'Cifrado de templates, control de acceso estricto' },
+      { id: 'R2', descripcion: 'Uso indebido de datos biométricos', probabilidad: 2, impacto: 5, medidas: 'Política de uso, auditoría de accesos' }
+    ],
+    medidasImplementadas: 'Cifrado AES-256 de templates, control de acceso por roles, no almacenamiento de imágenes faciales',
+    medidasPropuestas: 'Implementar autenticación multifactor, realizar pentest anual',
+    riesgoResidual: 'Medio',
+    conclusion: 'El tratamiento presenta riesgos que pueden ser mitigados con las medidas implementadas. Se recomienda mantener las medidas propuestas para reducir el riesgo residual.',
+    estado: 'Aprobada'
+  },
+  {
+    id: 'EIPD-002',
+    nombre: 'Evaluación de Impacto - App Móvil',
+    tratamiento: 'RAT-001',
+    descripcion: 'Evaluación del tratamiento de datos personales a través de la aplicación móvil para clientes',
+    responsable: 'Roberto Salazar Espinoza',
+    fechaEvaluacion: '2025-12-01',
+    datosEspeciales: true,
+    transferenciasInternacionales: true,
+    monitoreoSistematico: true,
+    decisionesAutomatizadas: true,
+    granEscala: true,
+    riesgos: [
+      { id: 'R1', descripcion: 'Robo o pérdida de dispositivo móvil', probabilidad: 4, impacto: 4, medidas: 'Cifrado en dispositivo, borrado remoto' },
+      { id: 'R2', descripcion: 'Interceptación de comunicaciones', probabilidad: 3, impacto: 5, medidas: 'Cifrado end-to-end, certificados SSL' }
+    ],
+    medidasImplementadas: 'Cifrado end-to-end, biometría para acceso, borrado remoto',
+    medidasPropuestas: 'Implementar detección de jailbreak/root, análisis de malware en tiempo real',
+    riesgoResidual: 'Alto',
+    conclusion: 'La aplicación presenta riesgos significativos que requieren medidas adicionales. Se debe implementar el plan de mejora antes de continuar con el tratamiento.',
+    estado: 'Requiere revisión'
+  }
+];
+
+// ============ DATOS DEMO PLAN DE ACCIÓN ============
+export const demoActionPlans: ActionPlan[] = [
+  { id: 'PA-001', codigo: 'PA-2025-001', titulo: 'Actualizar contrato con encargado de tratamiento CobrExpress', descripcion: 'Actualizar el contrato con CobrExpress S.A. conforme a los requisitos del art. 23 LOPDP y art. 32 RGLOPDP, incluyendo cláusulas de seguridad, confidencialidad y auditoría.', origen: 'Auditoría', origenReferencia: 'AUD-001 / H-004', prioridad: 'Crítica', responsable: 'Patricia Isabel Moreno', fechaCreacion: '2025-10-15', fechaCompromiso: '2026-02-01', fechaCierre: '', estado: 'En progreso', progreso: 60, acciones: [
+    { fecha: '2025-11-01', descripcion: 'Revisión de cláusulas contractuales vigentes', responsable: 'Patricia Isabel Moreno', completada: true },
+    { fecha: '2025-12-15', descripcion: 'Elaboración de nuevo contrato con asesoría jurídica', responsable: 'Roberto Salazar Espinoza', completada: true },
+    { fecha: '2026-01-30', descripcion: 'Negociación con CobrExpress', responsable: 'Patricia Isabel Moreno', completada: false },
+    { fecha: '2026-02-01', descripcion: 'Firma del nuevo contrato', responsable: 'Carlos Mendoza Villacís', completada: false }
+  ], observaciones: 'En negociación con el proveedor' },
+  { id: 'PA-002', codigo: 'PA-2025-002', titulo: 'Implementar EIPD para tratamiento biométrico', descripcion: 'Realizar Evaluación de Impacto de Protección de Datos para el tratamiento de datos biométricos (RAT-005) conforme art. 24 LOPDP.', origen: 'Auditoría', origenReferencia: 'AUD-001 / H-003', prioridad: 'Crítica', responsable: 'Roberto Salazar Espinoza', fechaCreacion: '2025-10-15', fechaCompromiso: '2026-02-15', fechaCierre: '', estado: 'En progreso', progreso: 35, acciones: [
+    { fecha: '2025-11-15', descripcion: 'Definición de metodología EIPD', responsable: 'Roberto Salazar Espinoza', completada: true },
+    { fecha: '2026-01-15', descripcion: 'Levantamiento de información del tratamiento', responsable: 'Carmen Rosa Vega', completada: false },
+    { fecha: '2026-02-01', descripcion: 'Análisis de riesgos y necesidades', responsable: 'Roberto Salazar Espinoza', completada: false },
+    { fecha: '2026-02-15', descripcion: 'Documentación y aprobación de EIPD', responsable: 'Roberto Salazar Espinoza', completada: false }
+  ], observaciones: 'Metodología definida, pendiente levantamiento' },
+  { id: 'PA-003', codigo: 'PA-2025-003', titulo: 'Regularización de consentimientos pendientes', descripcion: 'Obtener consentimientos actualizados de los 4 empleados que no tienen consentimiento vigente conforme a la nueva política.', origen: 'Auditoría', origenReferencia: 'AUD-001 / H-002', prioridad: 'Alta', responsable: 'Carmen Rosa Vega', fechaCreacion: '2025-10-20', fechaCompromiso: '2026-03-15', fechaCierre: '', estado: 'En progreso', progreso: 50, acciones: [
+    { fecha: '2025-11-10', descripcion: 'Identificación de empleados pendientes', responsable: 'Carmen Rosa Vega', completada: true },
+    { fecha: '2025-12-20', descripcion: 'Notificación a empleados', responsable: 'Carmen Rosa Vega', completada: true },
+    { fecha: '2026-02-15', descripcion: 'Recolección de firmas', responsable: 'Carmen Rosa Vega', completada: false },
+    { fecha: '2026-03-15', descripcion: 'Verificación y archivo', responsable: 'Carmen Rosa Vega', completada: false }
+  ], observaciones: '2 de 4 empleados ya firmaron' },
+  { id: 'PA-004', codigo: 'PA-2025-004', titulo: 'Implementar MFA en todas las aplicaciones', descripcion: 'Extender la autenticación multifactor a todas las aplicaciones que manejan datos personales, conforme hallazgo de auditoría ISO 27001.', origen: 'Auditoría', origenReferencia: 'AUD-002 / H-006', prioridad: 'Alta', responsable: 'Andrés Felipe Bravo', fechaCreacion: '2025-12-01', fechaCompromiso: '2026-03-01', fechaCierre: '', estado: 'En progreso', progreso: 40, acciones: [
+    { fecha: '2025-12-15', descripcion: 'Inventario de aplicaciones sin MFA', responsable: 'Andrés Felipe Bravo', completada: true },
+    { fecha: '2026-01-30', descripcion: 'Implementación en aplicaciones críticas', responsable: 'José Miguel Torres', completada: false },
+    { fecha: '2026-02-28', descripcion: 'Implementación en aplicaciones restantes', responsable: 'José Miguel Torres', completada: false },
+    { fecha: '2026-03-01', descripcion: 'Verificación y pruebas', responsable: 'Andrés Felipe Bravo', completada: false }
+  ], observaciones: 'Inventario completado, 8 aplicaciones identificadas' },
+  { id: 'PA-005', codigo: 'PA-2026-001', titulo: 'Atender solicitud ARCO vencida ARCO-2025-004', descripcion: 'Resolver de manera urgente la solicitud de cancelación ARCO-2025-004 que se encuentra vencida desde hace más de 4 meses.', origen: 'Hallazgo', origenReferencia: 'ARCO-2025-004', prioridad: 'Crítica', responsable: 'María Fernanda Andrade', fechaCreacion: '2026-01-15', fechaCompromiso: '2026-01-25', fechaCierre: '', estado: 'Pendiente', progreso: 0, acciones: [
+    { fecha: '2026-01-20', descripcion: 'Contactar al titular y disculparse por demora', responsable: 'María Fernanda Andrade', completada: false },
+    { fecha: '2026-01-23', descripcion: 'Procesar solicitud de cancelación', responsable: 'María Fernanda Andrade', completada: false },
+    { fecha: '2026-01-25', descripcion: 'Enviar respuesta formal al titular', responsable: 'María Fernanda Andrade', completada: false }
+  ], observaciones: 'URGENTE - Requiere atención inmediata' },
+  { id: 'PA-006', codigo: 'PA-2026-002', titulo: 'Programa de capacitación continua 2026', descripcion: 'Diseñar e implementar programa de capacitación continua en protección de datos y seguridad de la información para todo el personal.', origen: 'Mejora Continua', origenReferencia: 'Dimensión de Madurez: Formación', prioridad: 'Media', responsable: 'Carmen Rosa Vega', fechaCreacion: '2026-01-10', fechaCompromiso: '2026-12-31', fechaCierre: '', estado: 'En progreso', progreso: 15, acciones: [
+    { fecha: '2026-01-31', descripcion: 'Diseño del programa anual', responsable: 'Carmen Rosa Vega', completada: false },
+    { fecha: '2026-02-28', descripcion: 'Aprobación del programa', responsable: 'Carlos Mendoza Villacís', completada: false },
+    { fecha: '2026-03-31', descripcion: 'Primera sesión de capacitación', responsable: 'Roberto Salazar Espinoza', completada: false }
+  ], observaciones: 'En fase de diseño' },
+  { id: 'PA-007', codigo: 'PA-2026-003', titulo: 'Implementar DevSecOps en pipeline de desarrollo', descripcion: 'Implementar prácticas de seguridad en el ciclo de desarrollo de software, incluyendo SAST, DAST y revisión de seguridad en CI/CD.', origen: 'Auditoría', origenReferencia: 'AUD-002 / H-008', prioridad: 'Alta', responsable: 'José Miguel Torres', fechaCreacion: '2025-12-20', fechaCompromiso: '2026-06-01', fechaCierre: '', estado: 'Pendiente', progreso: 10, acciones: [
+    { fecha: '2026-02-01', descripcion: 'Evaluación de herramientas SAST/DAST', responsable: 'José Miguel Torres', completada: false },
+    { fecha: '2026-03-15', descripcion: 'Implementación piloto', responsable: 'José Miguel Torres', completada: false },
+    { fecha: '2026-05-01', descripcion: 'Despliegue completo', responsable: 'José Miguel Torres', completada: false },
+    { fecha: '2026-06-01', descripcion: 'Capacitación del equipo de desarrollo', responsable: 'José Miguel Torres', completada: false }
+  ], observaciones: 'Pendiente evaluación de herramientas' },
+  { id: 'PA-008', codigo: 'PA-2026-004', titulo: 'Cifrar laptops sin BitLocker', descripcion: 'Implementar cifrado de disco completo en las 13 laptops que actualmente no tienen BitLocker activado.', origen: 'Auditoría', origenReferencia: 'AUD-002 / H-007', prioridad: 'Alta', responsable: 'José Miguel Torres', fechaCreacion: '2025-12-15', fechaCompromiso: '2026-02-15', fechaCierre: '', estado: 'En progreso', progreso: 70, acciones: [
+    { fecha: '2025-12-30', descripcion: 'Inventario de equipos sin cifrar', responsable: 'Luis Eduardo Castillo', completada: true },
+    { fecha: '2026-01-15', descripcion: 'Cifrado de 5 equipos', responsable: 'Luis Eduardo Castillo', completada: true },
+    { fecha: '2026-01-31', descripcion: 'Cifrado de 4 equipos adicionales', responsable: 'Luis Eduardo Castillo', completada: true },
+    { fecha: '2026-02-15', descripcion: 'Cifrado de 4 equipos restantes', responsable: 'Luis Eduardo Castillo', completada: false }
+  ], observaciones: '9 de 13 equipos ya cifrados' }
+];

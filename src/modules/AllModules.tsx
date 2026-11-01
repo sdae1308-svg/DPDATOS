@@ -873,3 +873,344 @@ export function LogsModule() {
     </div>
   );
 }
+
+// ==================== ARCO REQUESTS ====================
+import type { ARCORequest } from '../data/demoData';
+
+export function ARCOModule() {
+  const { arcoRequests, addARCORequest, updateARCORequest, deleteARCORequest } = useEnterprise();
+  const [filter, setFilter] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
+  const [filterEstado, setFilterEstado] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [form, setForm] = useState<Partial<ARCORequest>>({
+    codigo: '',
+    fechaSolicitud: new Date().toISOString().split('T')[0],
+    titularNombre: '',
+    titularCedula: '',
+    titularEmail: '',
+    titularTelefono: '',
+    tipoDerecho: 'Acceso',
+    descripcion: '',
+    tratamientoRelacionado: '',
+    estado: 'Recibida',
+    respuesta: '',
+    responsable: '',
+    observaciones: ''
+  });
+
+  const filtered = arcoRequests.filter((r: ARCORequest) => {
+    const matchText = r.titularNombre.toLowerCase().includes(filter.toLowerCase()) || 
+                      r.codigo.toLowerCase().includes(filter.toLowerCase()) ||
+                      r.descripcion.toLowerCase().includes(filter.toLowerCase());
+    const matchTipo = !filterTipo || r.tipoDerecho === filterTipo;
+    const matchEstado = !filterEstado || r.estado === filterEstado;
+    return matchText && matchTipo && matchEstado;
+  });
+
+  const calculateDays = (fechaSolicitud: string) => {
+    const solicitud = new Date(fechaSolicitud);
+    const hoy = new Date();
+    const diffTime = hoy.getTime() - solicitud.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const calculateDeadline = (fechaSolicitud: string) => {
+    const solicitud = new Date(fechaSolicitud);
+    solicitud.setDate(solicitud.getDate() + 15);
+    return solicitud.toISOString().split('T')[0];
+  };
+
+  const handleSave = () => {
+    if (!form.titularNombre || !form.titularCedula || !form.descripcion) {
+      alert('Complete los campos obligatorios: Titular, Cédula y Descripción');
+      return;
+    }
+
+    const diasTranscurridos = form.fechaSolicitud ? calculateDays(form.fechaSolicitud) : 0;
+    const fechaLimiteRespuesta = form.fechaSolicitud ? calculateDeadline(form.fechaSolicitud) : '';
+
+    if (editId) {
+      updateARCORequest(editId, { ...form, diasTranscurridos, fechaLimiteRespuesta });
+    } else {
+      const id = `ARCO-${String(arcoRequests.length + 1).padStart(3, '0')}`;
+      const codigo = `ARCO-${new Date().getFullYear()}-${String(arcoRequests.length + 1).padStart(3, '0')}`;
+      addARCORequest({ ...form, id, codigo, diasTranscurridos, fechaLimiteRespuesta } as ARCORequest);
+    }
+    setShowForm(false);
+    setEditId(null);
+    setForm({
+      codigo: '',
+      fechaSolicitud: new Date().toISOString().split('T')[0],
+      titularNombre: '',
+      titularCedula: '',
+      titularEmail: '',
+      titularTelefono: '',
+      tipoDerecho: 'Acceso',
+      descripcion: '',
+      tratamientoRelacionado: '',
+      estado: 'Recibida',
+      respuesta: '',
+      responsable: '',
+      observaciones: ''
+    });
+  };
+
+  const handleExport = (format: 'excel' | 'pdf' | 'word') => {
+    const data = arcoRequests.map(r => ({
+      Código: r.codigo,
+      'Fecha Recepción': r.fechaRecepcion,
+      'Fecha Límite': r.fechaLimite,
+      Titular: r.titular,
+      Cédula: r.cedulaTitular,
+      Email: r.emailTitular,
+      Teléfono: r.telefonoTitular,
+      'Tipo Derecho': r.tipoDerecho,
+      Descripción: r.descripcion,
+      Tratamiento: r.tratamientoAfectado,
+      Estado: r.estado,
+      Responsable: r.responsable,
+      'Días Transcurridos': r.diasTranscurridos,
+      Respuesta: r.respuesta,
+      Observaciones: r.observaciones
+    }));
+
+    if (format === 'excel') {
+      exportToExcel(data, 'Solicitudes_ARCO', 'ARCO');
+    } else if (format === 'pdf') {
+      exportToPDF('Registro de Solicitudes ARCO', data.map(d => ({ 
+        heading: `${d.Código} - ${d.Titular}`, 
+        text: `Tipo: ${d['Tipo Derecho']}\nEstado: ${d.Estado}\nDías: ${d['Días Transcurridos']}\nDescripción: ${d.Descripción}` 
+      })), 'Solicitudes_ARCO');
+    } else {
+      exportToWord('Registro de Solicitudes ARCO', data.map(d => ({ 
+        heading: `${d.Código} - ${d.Titular}`, 
+        text: `Tipo: ${d['Tipo Derecho']}\nEstado: ${d.Estado}\nDías: ${d['Días Transcurridos']}\nDescripción: ${d.Descripción}` 
+      })), 'Solicitudes_ARCO');
+    }
+  };
+
+  const stats = {
+    total: arcoRequests.length,
+    recibidas: arcoRequests.filter((r: ARCORequest) => r.estado === 'Recibida').length,
+    enProceso: arcoRequests.filter((r: ARCORequest) => r.estado === 'En Proceso').length,
+    respondidas: arcoRequests.filter((r: ARCORequest) => r.estado === 'Respondida').length,
+    cerradas: arcoRequests.filter((r: ARCORequest) => r.estado === 'Cerrada').length,
+    vencidas: arcoRequests.filter((r: ARCORequest) => r.estado === 'Vencida').length,
+    porVencer: arcoRequests.filter((r: ARCORequest) => {
+      if (r.estado === 'Cerrada' || r.estado === 'Vencida') return false;
+      const diasRestantes = 15 - r.diasTranscurridos;
+      return diasRestantes <= 3 && diasRestantes > 0;
+    }).length
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Estadísticas */}
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-blue-600">{stats.total}</p>
+          <p className="text-xs text-gray-500">Total</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-gray-600">{stats.recibidas}</p>
+          <p className="text-xs text-gray-500">Recibidas</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-amber-600">{stats.enProceso}</p>
+          <p className="text-xs text-gray-500">En Proceso</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-blue-600">{stats.respondidas}</p>
+          <p className="text-xs text-gray-500">Respondidas</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-green-600">{stats.cerradas}</p>
+          <p className="text-xs text-gray-500">Cerradas</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-red-600">{stats.vencidas}</p>
+          <p className="text-xs text-gray-500">Vencidas</p>
+        </div>
+        <div className="bg-white rounded-lg border p-3 text-center">
+          <p className="text-2xl font-bold text-orange-600">{stats.porVencer}</p>
+          <p className="text-xs text-gray-500">Por Vencer</p>
+        </div>
+      </div>
+
+      {/* Filtros y Acciones */}
+      <div className="bg-white rounded-lg border p-3 flex flex-wrap gap-2 items-center">
+        <input type="text" placeholder="Buscar..." value={filter} onChange={e => setFilter(e.target.value)} className="flex-1 min-w-48 border rounded px-3 py-1.5 text-sm" />
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} className="border rounded px-3 py-1.5 text-sm">
+          <option value="">Todos los tipos</option>
+          <option value="Acceso">Acceso</option>
+          <option value="Rectificación">Rectificación</option>
+          <option value="Cancelación">Cancelación</option>
+          <option value="Oposición">Oposición</option>
+        </select>
+        <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} className="border rounded px-3 py-1.5 text-sm">
+          <option value="">Todos los estados</option>
+          <option value="Recibida">Recibida</option>
+          <option value="En Proceso">En Proceso</option>
+          <option value="Respondida">Respondida</option>
+          <option value="Cerrada">Cerrada</option>
+          <option value="Vencida">Vencida</option>
+        </select>
+        <button onClick={() => { setEditId(null); setForm({ fechaRecepcion: new Date().toISOString().split('T')[0], tipoDerecho: 'Acceso', estado: 'Recibida' }); setShowForm(true); }} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+          <i className="fas fa-plus mr-1"></i>Nueva Solicitud
+        </button>
+        <button onClick={() => handleExport('excel')} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700">
+          <i className="fas fa-file-excel mr-1"></i>Excel
+        </button>
+        <button onClick={() => handleExport('pdf')} className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700">
+          <i className="fas fa-file-pdf mr-1"></i>PDF
+        </button>
+        <button onClick={() => handleExport('word')} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+          <i className="fas fa-file-word mr-1"></i>Word
+        </button>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-3 py-2">Código</th>
+                <th className="text-left px-3 py-2">Titular</th>
+                <th className="text-center px-3 py-2">Tipo</th>
+                <th className="text-center px-3 py-2">Estado</th>
+                <th className="text-center px-3 py-2">Días</th>
+                <th className="text-left px-3 py-2">Fecha Límite</th>
+                <th className="text-center px-3 py-2">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r: ARCORequest) => {
+                const diasRestantes = 15 - r.diasTranscurridos;
+                const estadoColor = r.estado === 'Cerrada' ? 'bg-green-100 text-green-700' :
+                                   r.estado === 'Vencida' ? 'bg-red-100 text-red-700' :
+                                   r.estado === 'Respondida' ? 'bg-blue-100 text-blue-700' :
+                                   r.estado === 'En Proceso' ? 'bg-amber-100 text-amber-700' :
+                                   'bg-gray-100 text-gray-700';
+                const diasColor = diasRestantes <= 0 ? 'text-red-600 font-bold' :
+                                 diasRestantes <= 3 ? 'text-orange-600 font-bold' :
+                                 'text-gray-600';
+                return (
+                  <tr key={r.id} className="border-t hover:bg-gray-50">
+                    <td className="px-3 py-2 font-mono text-xs">{r.codigo}</td>
+                    <td className="px-3 py-2">
+                      <p className="font-medium text-xs">{r.titular}</p>
+                      <p className="text-[10px] text-gray-400">{r.cedulaTitular}</p>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">{r.tipoDerecho}</span>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={`px-2 py-0.5 rounded text-xs ${estadoColor}`}>{r.estado}</span>
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={diasColor}>{r.diasTranscurridos}/15</span>
+                    </td>
+                    <td className="px-3 py-2 text-xs">{r.fechaLimite}</td>
+                    <td className="px-3 py-2 text-center">
+                      <button onClick={() => { setForm(r); setEditId(r.id); setShowForm(true); }} className="text-blue-600 hover:text-blue-800 mr-2">
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button onClick={() => { if (confirm('¿Eliminar esta solicitud?')) deleteARCORequest(r.id); }} className="text-red-600 hover:text-red-800">
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Formulario Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <h3 className="text-lg font-bold mb-4">{editId ? 'Editar' : 'Nueva'} Solicitud ARCO</h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-600">Fecha de Recepción *</label>
+                  <input type="date" value={form.fechaRecepcion} onChange={e => setForm({...form, fechaRecepcion: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600">Tipo de Derecho *</label>
+                  <select value={form.tipoDerecho} onChange={e => setForm({...form, tipoDerecho: e.target.value as any})} className="w-full border rounded px-3 py-1.5 text-sm">
+                    <option value="Acceso">Acceso</option>
+                    <option value="Rectificación">Rectificación</option>
+                    <option value="Cancelación">Cancelación</option>
+                    <option value="Oposición">Oposición</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-600">Nombre del Titular *</label>
+                  <input type="text" value={form.titular} onChange={e => setForm({...form, titular: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="Nombre completo" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600">Cédula *</label>
+                  <input type="text" value={form.cedulaTitular} onChange={e => setForm({...form, cedulaTitular: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="10 dígitos" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-600">Email</label>
+                  <input type="email" value={form.emailTitular} onChange={e => setForm({...form, emailTitular: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="email@ejemplo.com" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600">Teléfono</label>
+                  <input type="text" value={form.telefonoTitular} onChange={e => setForm({...form, telefonoTitular: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="+593 99 1234567" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">Descripción de la Solicitud *</label>
+                <textarea value={form.descripcion} onChange={e => setForm({...form, descripcion: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm h-20" placeholder="Describa detalladamente la solicitud del titular..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-600">Tratamiento Afectado</label>
+                  <input type="text" value={form.tratamientoAfectado} onChange={e => setForm({...form, tratamientoAfectado: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="Ej: RAT-001" />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-600">Responsable</label>
+                  <input type="text" value={form.responsable} onChange={e => setForm({...form, responsable: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm" placeholder="Nombre del responsable" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">Estado</label>
+                <select value={form.estado} onChange={e => setForm({...form, estado: e.target.value as any})} className="w-full border rounded px-3 py-1.5 text-sm">
+                  <option value="Recibida">Recibida</option>
+                  <option value="En Proceso">En Proceso</option>
+                  <option value="Respondida">Respondida</option>
+                  <option value="Cerrada">Cerrada</option>
+                  <option value="Vencida">Vencida</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">Respuesta</label>
+                <textarea value={form.respuesta} onChange={e => setForm({...form, respuesta: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm h-20" placeholder="Describa la respuesta dada al titular..." />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600">Observaciones</label>
+                <textarea value={form.observaciones} onChange={e => setForm({...form, observaciones: e.target.value})} className="w-full border rounded px-3 py-1.5 text-sm h-16" placeholder="Observaciones adicionales..." />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">Guardar</button>
+              <button onClick={() => { setShowForm(false); setEditId(null); }} className="px-4 py-2 bg-gray-200 rounded text-sm hover:bg-gray-300">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

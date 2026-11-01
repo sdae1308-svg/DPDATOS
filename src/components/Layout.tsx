@@ -3,6 +3,14 @@ import { useStore } from '../store/store';
 import { useEnterprise } from '../store/useEnterprise';
 import { createBackup, downloadBackup, getLastBackupFromLocalStorage, loadBackupFromFile, getBackupsFromIndexedDB, deleteBackupFromIndexedDB, clearAllBackups, type BackupData } from '../utils/backupUtils';
 
+interface SearchResult {
+  id: string;
+  type: string;
+  title: string;
+  module: string;
+  description?: string;
+}
+
 interface LayoutProps {
   children: React.ReactNode;
   currentModule: string;
@@ -15,10 +23,14 @@ const menuItems = [
   { id: 'employees', label: 'Empleados', icon: 'fa-users' },
   { id: 'assets', label: 'Activos', icon: 'fa-server' },
   { id: 'rat', label: 'RAT', icon: 'fa-clipboard-list' },
+  { id: 'arco', label: 'Derechos ARCO', icon: 'fa-user-check' },
   { id: 'incidents', label: 'Incidentes/Riesgos', icon: 'fa-shield-halved' },
+  { id: 'actionplan', label: 'Plan de Acción', icon: 'fa-tasks' },
+  { id: 'eipd', label: 'Evaluaciones de Impacto', icon: 'fa-clipboard-check' },
   { id: 'audit', label: 'Auditoría', icon: 'fa-magnifying-glass-chart' },
   { id: 'maturity', label: 'Madurez', icon: 'fa-chart-simple' },
   { id: 'documents', label: 'Documentos', icon: 'fa-file-lines' },
+  { id: 'alerts', label: 'Alertas', icon: 'fa-bell' },
   { id: 'admin', label: 'Administración', icon: 'fa-cog' },
   { id: 'logs', label: 'Bitácora', icon: 'fa-clock-rotate-left' },
 ];
@@ -28,9 +40,13 @@ export default function Layout({ children, currentModule, onNavigate }: LayoutPr
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [backupHistory, setBackupHistory] = useState<BackupData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   const { currentUser, logout, enterprises, activeEnterpriseId, switchEnterprise, restoreFromBackup } = useStore();
-  const { company } = useEnterprise();
+  const { company, employees, assets, rats, incidents, risks, documents } = useEnterprise();
 
   // Cargar histórico de respaldos cuando se abre el modal
   useEffect(() => {
@@ -38,6 +54,115 @@ export default function Layout({ children, currentModule, onNavigate }: LayoutPr
       getBackupsFromIndexedDB().then(setBackupHistory);
     }
   }, [showBackupModal]);
+
+  // Búsqueda global
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const results: SearchResult[] = [];
+
+    // Buscar en empleados
+    employees.forEach(emp => {
+      if (emp.nombre.toLowerCase().includes(query) || emp.cargo.toLowerCase().includes(query)) {
+        results.push({
+          id: emp.id,
+          type: 'Empleado',
+          title: emp.nombre,
+          module: 'employees',
+          description: emp.cargo
+        });
+      }
+    });
+
+    // Buscar en activos
+    assets.forEach(asset => {
+      if (asset.nombre.toLowerCase().includes(query) || asset.tipo.toLowerCase().includes(query)) {
+        results.push({
+          id: asset.id,
+          type: 'Activo',
+          title: asset.nombre,
+          module: 'assets',
+          description: asset.tipo
+        });
+      }
+    });
+
+    // Buscar en RAT
+    rats.forEach(rat => {
+      if (rat.nombre.toLowerCase().includes(query) || rat.finalidad.toLowerCase().includes(query)) {
+        results.push({
+          id: rat.id,
+          type: 'RAT',
+          title: rat.nombre,
+          module: 'rat',
+          description: rat.finalidad.substring(0, 100)
+        });
+      }
+    });
+
+    // Buscar en incidentes
+    incidents.forEach(inc => {
+      if (inc.codigo.toLowerCase().includes(query) || inc.descripcion.toLowerCase().includes(query)) {
+        results.push({
+          id: inc.id,
+          type: 'Incidente',
+          title: inc.codigo,
+          module: 'incidents',
+          description: inc.descripcion.substring(0, 100)
+        });
+      }
+    });
+
+    // Buscar en riesgos
+    risks.forEach(risk => {
+      if (risk.nombre.toLowerCase().includes(query)) {
+        results.push({
+          id: risk.id,
+          type: 'Riesgo',
+          title: risk.nombre,
+          module: 'incidents',
+          description: `Riesgo: ${risk.riesgoInherente}`
+        });
+      }
+    });
+
+    // Buscar en documentos
+    documents.forEach(doc => {
+      if (doc.nombre.toLowerCase().includes(query)) {
+        results.push({
+          id: doc.id,
+          type: 'Documento',
+          title: doc.nombre,
+          module: 'documents',
+          description: doc.tipo
+        });
+      }
+    });
+
+    setSearchResults(results.slice(0, 10));
+  }, [searchQuery, employees, assets, rats, incidents, risks, documents]);
+
+  // Cerrar resultados de búsqueda al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchResultClick = (result: SearchResult) => {
+    onNavigate(result.module);
+    setSearchQuery('');
+    setShowSearchResults(false);
+  };
 
   // Crear respaldo manual
   const handleCreateBackup = () => {
@@ -151,6 +276,49 @@ export default function Layout({ children, currentModule, onNavigate }: LayoutPr
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="text-gray-500 hover:text-gray-700"><i className="fas fa-bars"></i></button>
             <h2 className="text-base font-semibold text-gray-800">{menuItems.find(m => m.id === currentModule)?.label}</h2>
           </div>
+          
+          {/* Barra de búsqueda global */}
+          <div ref={searchRef} className="flex-1 max-w-md mx-4 relative">
+            <div className="relative">
+              <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+              <input
+                type="text"
+                placeholder="Buscar en todo el sistema..."
+                value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(true); }}
+                onFocus={() => setShowSearchResults(true)}
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Resultados de búsqueda */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-96 overflow-y-auto z-50">
+                {searchResults.map(result => (
+                  <button
+                    key={`${result.module}-${result.id}`}
+                    onClick={() => handleSearchResultClick(result)}
+                    className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">{result.type}</span>
+                      <span className="text-sm font-medium text-gray-800">{result.title}</span>
+                    </div>
+                    {result.description && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{result.description}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {showSearchResults && searchQuery && searchResults.length === 0 && (
+              <div className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-50">
+                <p className="text-sm text-gray-500 text-center">No se encontraron resultados</p>
+              </div>
+            )}
+          </div>
+          
           <div className="flex items-center gap-2">
             {/* Mensaje de feedback */}
             {backupMessage && (
